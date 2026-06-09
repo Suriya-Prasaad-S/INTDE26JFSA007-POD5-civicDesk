@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CivicDesk IAM — Test Case Report</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --panel: #1a2129;
+    --panel-2: #222b35;
+    --border: #2d3742;
+    --text: #e6edf3;
+    --muted: #9aa7b4;
+    --green: #3fb950;
+    --green-bg: rgba(63,185,80,.12);
+    --blue: #58a6ff;
+    --accent: #d29922;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+  header h1 { margin: 0 0 4px; font-size: 28px; }
+  header .sub { color: var(--muted); font-size: 14px; }
+
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    margin: 28px 0 36px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .card .num { font-size: 30px; font-weight: 700; }
+  .card .lbl { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  .num.green { color: var(--green); }
+  .num.blue { color: var(--blue); }
+
+  .bar { background: var(--panel-2); border-radius: 6px; height: 8px; overflow: hidden; margin-top: 18px; }
+  .bar > span { display: block; height: 100%; background: var(--green); width: 100%; }
+
+  .suite {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 18px;
+    overflow: hidden;
+  }
+  .suite > summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    user-select: none;
+  }
+  .suite > summary::-webkit-details-marker { display: none; }
+  .suite > summary:hover { background: var(--panel-2); }
+  .chev { transition: transform .15s; color: var(--muted); font-size: 12px; }
+  details[open] .chev { transform: rotate(90deg); }
+  .suite-name { font-weight: 600; font-size: 15px; }
+  .suite-pkg { color: var(--muted); font-size: 12px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
+  .suite-meta { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .pill {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .pill.kind { color: var(--accent); }
+
+  table { width: 100%; border-collapse: collapse; }
+  tbody tr { border-top: 1px solid var(--border); }
+  td { padding: 12px 18px; vertical-align: top; font-size: 14px; }
+  td.status { width: 70px; white-space: nowrap; }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--green-bg);
+    color: var(--green);
+    border: 1px solid rgba(63,185,80,.3);
+  }
+  .tname { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 13px; color: var(--text); }
+  .tdesc { color: var(--muted); margin-top: 3px; font-size: 13px; }
+  footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 40px; }
+  .legend { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>CivicDesk IAM — Test Case Report</h1>
+    <div class="sub">Module 2.1 — Identity &amp; Access Management &nbsp;·&nbsp; Spring Boot 3.4.1 / Java 21 &nbsp;·&nbsp; JUnit 5 + Mockito + MockMvc &nbsp;·&nbsp; generated 2026-06-09</div>
+  </header>
+
+  <section class="summary">
+    <div class="card"><div class="num blue">52</div><div class="lbl">Total tests</div></div>
+    <div class="card"><div class="num">14</div><div class="lbl">Test classes</div></div>
+  </section>
+  <div class="bar"><span></span></div>
+  <p class="legend" style="margin-top:24px">All 52 tests pass. Click a suite to expand its cases.</p>
+
+  <!-- ============ Unit: Utilities ============ -->
+  <details class="suite" open>
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">JwtUtilTest</div>
+        <div class="suite-pkg">com.civicdesk.common.util</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">Unit · @SpringBootTest</span>
+        <span class="pill">4 tests</span>
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">generateToken_validInputs_returnsNonNullToken</div><div class="tdesc">Generating a token for a user id + role returns a non-null, non-empty JWT.</div></td></tr>
+      </td><td><div class="tname">validateToken_validToken_returnsTrue</div><div class="tdesc">A freshly generated token is accepted by validateToken().</div></td></tr>
+      </td><td><div class="tname">extractRole_fromToken_returnsCorrectRole</div><div class="tdesc">The role claim ("ADM") round-trips correctly out of the token.</div></td></tr>
+      </td><td><div class="tname">validateToken_invalidToken_returnsFalse</div><div class="tdesc">A malformed string is rejected as an invalid token.</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">NationalIdUtilTest</div>
+        <div class="suite-pkg">com.civicdesk.common.util</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">Unit</span>
+        <span class="pill">5 tests</span>
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">hash_isConsistentAnd64HexChars</div><div class="tdesc">Hashing the same national id twice yields identical output of 64 hex chars (SHA-256).</div></td></tr>
+      </td><td><div class="tname">hash_differsForDifferentInput</div><div class="tdesc">Different inputs produce different hashes.</div></td></tr>
+      </td><td><div class="tname">hash_blankOrNull_returnsNull</div><div class="tdesc">Null or blank input hashes to null (no crash).</div></td></tr>
+      </td><td><div class="tname">maskLast4_masksAllButLastFour</div><div class="tdesc">"123456789012" masks to "********9012".</div></td></tr>
+      </td><td><div class="tname">maskLast4_shortValue_returnedAsIs</div><div class="tdesc">A value of 4 chars or fewer is returned unchanged.</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <!-- ============ Unit: Services ============ -->
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">AuthServiceImplTest</div>
+        <div class="suite-pkg">com.civicdesk.module.iam.service</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">Unit · Mockito</span>
+        <span class="pill">11 tests</span>
+        <!-- <span class="badge">11 / 11 PASS</span> -->
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">citizenLogin_validCredentials_returnsToken</div><div class="tdesc">Valid citizen credentials return an AuthResponse with a JWT and role "CIT".</div></td></tr>
+      </td><td><div class="tname">citizenLogin_wrongPassword_throwsBadCredentials</div><div class="tdesc">Wrong password throws BadCredentialsException.</div></td></tr>
+      </td><td><div class="tname">staffLogin_passwordNotSet_throwsPasswordNotSet</div><div class="tdesc">Admin-created staff who never set a password are blocked with PasswordNotSetException.</div></td></tr>
+      </td><td><div class="tname">citizenLogin_staffTriesCitizenPortal_throwsForbidden</div><div class="tdesc">A staff account using the citizen login portal is rejected with ForbiddenException.</div></td></tr>
+      </td><td><div class="tname">staffLogin_citizenTriesStaffPortal_throwsForbidden</div><div class="tdesc">A citizen using the staff login portal is rejected with ForbiddenException.</div></td></tr>
+      </td><td><div class="tname">staffLogin_suspendedAccount_throwsAccountSuspended</div><div class="tdesc">A suspended ("Sus") staff account cannot log in — AccountSuspendedException.</div></td></tr>
+      </td><td><div class="tname">register_duplicateEmail_throwsDuplicateEmail</div><div class="tdesc">Registering with an already-used email throws DuplicateEmailException.</div></td></tr>
+      </td><td><div class="tname">setPassword_firstTime_setsHashAndMarksSet</div><div class="tdesc">First-time set-password stores the bcrypt hash and flips isPasswordSet to true.</div></td></tr>
+      </td><td><div class="tname">setPassword_alreadySet_throwsForbidden</div><div class="tdesc">Set-password is one-time only; a second attempt throws ForbiddenException.</div></td></tr>
+      </td><td><div class="tname">setPassword_tooShort_throwsBadRequest</div><div class="tdesc">A password shorter than the minimum throws BadRequestException.</div></td></tr>
+      </td><td><div class="tname">setPassword_userNotFound_throwsNotFound</div><div class="tdesc">Set-password for an unknown email throws ResourceNotFoundException.</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">UserServiceImplTest</div>
+        <div class="suite-pkg">com.civicdesk.module.iam.service</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">Unit · Mockito</span>
+        <span class="pill">7 tests</span>
+        <!-- <span class="badge">7 / 7 PASS</span> -->
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">adminCreatesSupervisor_succeeds_andMapsDepartmentSupervisor</div><div class="tdesc">Admin creating a DS (supervisor) succeeds and links the department back to the new supervisor (1:1).</div></td></tr>
+      </td><td><div class="tname">adminCreatesNonSupervisor_throwsForbidden</div><div class="tdesc">Admin may only create supervisors; creating an ENG throws ForbiddenException.</div></td></tr>
+      </td><td><div class="tname">adminCreatesSupervisorWithoutDept_throwsBadRequest</div><div class="tdesc">Creating a supervisor with no departmentId throws BadRequestException.</div></td></tr>
+      </td><td><div class="tname">adminCreatesSupervisor_departmentNotFound_throwsBadRequest</div><div class="tdesc">An unknown departmentId throws BadRequestException.</div></td></tr>
+      </td><td><div class="tname">supervisorCreatesEngineer_assignsOwnDepartment</div><div class="tdesc">A supervisor creating an engineer ignores the body's deptId and assigns its own department.</div></td></tr>
+      </td><td><div class="tname">supervisorCreatesAdmin_throwsForbidden</div><div class="tdesc">A supervisor cannot create an admin — ForbiddenException.</div></td></tr>
+      </td><td><div class="tname">createUser_duplicateEmail_throwsDuplicate</div><div class="tdesc">Creating a user with an existing email throws DuplicateEmailException.</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">AuditServiceImplTest</div>
+        <div class="suite-pkg">com.civicdesk.module.iam.service</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">Unit · Mockito</span>
+        <span class="pill">1 test</span>
+        <!-- <span class="badge">1 / 1 PASS</span> -->
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">log_savesAuditEntryWithGivenFields</div><div class="tdesc">Calling log(...) persists an AuditLog carrying the given userId, action, module and IP (verified via ArgumentCaptor).</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <!-- ============ Unit: Security filter ============ -->
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">JwtAuthFilterTest</div>
+        <div class="suite-pkg">com.civicdesk.module.iam.security</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">Unit · Mockito</span>
+        <span class="pill">4 tests</span>
+        <!-- <span class="badge">4 / 4 PASS</span> -->
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">validToken_setsAuthenticationAndContinues</div><div class="tdesc">A valid token populates the SecurityContext (principal + ROLE_ADM) and the chain continues; no refresh header when fresh.</div></td></tr>
+      </td><td><div class="tname">tokenNearExpiry_issuesFreshTokenOnResponseHeader</div><div class="tdesc">A token near expiry triggers a sliding refresh — a new Bearer token + Expose-Headers are set on the response.</div></td></tr>
+      </td><td><div class="tname">missingHeader_passesThroughWithoutAuth</div><div class="tdesc">No Authorization header → no authentication is set, chain still proceeds.</div></td></tr>
+      </td><td><div class="tname">invalidToken_returns401AndStopsChain</div><div class="tdesc">An invalid token sets HTTP 401 and stops the filter chain.</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <!-- ============ Slice: Controllers (@WebMvcTest) ============ -->
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">AuthControllerTest</div>
+        <div class="suite-pkg">com.civicdesk.module.iam.controller</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">Web slice · @WebMvcTest</span>
+        <span class="pill">2 tests</span>
+        <!-- <span class="badge">2 / 2 PASS</span> -->
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">citizenLogin_validRequest_returns200</div><div class="tdesc">POST /auth/citizen/login returns 200 with "Login successful", token, role CIT and expiresIn 1800.</div></td></tr>
+      </td><td><div class="tname">register_missingEmail_returns400</div><div class="tdesc">POST /auth/register without an email fails bean validation → 400 Bad Request.</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">UserControllerTest</div>
+        <div class="suite-pkg">com.civicdesk.module.iam.controller</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">Web slice · @WebMvcTest</span>
+        <span class="pill">2 tests</span>
+        <!-- <span class="badge">2 / 2 PASS</span> -->
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">adminCreatesUser_returns201</div><div class="tdesc">As ADM, POST /users with a valid body returns 201 Created.</div></td></tr>
+      </td><td><div class="tname">adminListsUsers_returns200</div><div class="tdesc">As ADM, GET /users returns 200 with a paged response.</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">AuditLogControllerTest</div>
+        <div class="suite-pkg">com.civicdesk.module.iam.controller</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">Web slice · @WebMvcTest</span>
+        <span class="pill">2 tests</span>
+        <!-- <span class="badge">2 / 2 PASS</span> -->
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">admin_canReadAuditLogs_returns200</div><div class="tdesc">As ADM, GET /auditLogs returns 200.</div></td></tr>
+      </td><td><div class="tname">complianceOfficer_canReadAuditLogs_returns200</div><div class="tdesc">As Compliance Officer (CO), GET /auditLogs returns 200.</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <!-- ============ Slice: Repositories (@DataJpaTest) ============ -->
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">UserRepositoryTest</div>
+        <div class="suite-pkg">com.civicdesk.module.iam.repository</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">JPA slice · @DataJpaTest</span>
+        <span class="pill">3 tests</span>
+        <!-- <span class="badge">3 / 3 PASS</span> -->
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">findByEmail_existingEmail_returnsUser</div><div class="tdesc">findByEmail returns the persisted user for a known email.</div></td></tr>
+      </td><td><div class="tname">existsByEmail_existingEmail_returnsTrue</div><div class="tdesc">existsByEmail returns true for a known email.</div></td></tr>
+      </td><td><div class="tname">existsByEmail_unknownEmail_returnsFalse</div><div class="tdesc">existsByEmail returns false for an unknown email.</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">AuditLogRepositoryTest</div>
+        <div class="suite-pkg">com.civicdesk.module.iam.repository</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">JPA slice · @DataJpaTest</span>
+        <span class="pill">2 tests</span>
+        <!-- <span class="badge">2 / 2 PASS</span> -->
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">findByUserId_returnsOnlyThatUsersEntries</div><div class="tdesc">findByUserId("user-1") returns only that user's 2 entries (of 3 seeded).</div></td></tr>
+      </td><td><div class="tname">findAllByOrderByTimestampDesc_returnsAllEntries</div><div class="tdesc">findAllByOrderByTimestampDesc returns all 3 seeded entries.</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <!-- ============ Integration (full stack) ============ -->
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">AuthIntegrationTest</div>
+        <div class="suite-pkg">com.civicdesk.module.iam.integration</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">Integration · full stack</span>
+        <span class="pill">3 tests</span>
+        <!-- <span class="badge">3 / 3 PASS</span> -->
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">registerThenLoginThenAccessProtectedEndpoint</div><div class="tdesc">End-to-end: register → citizen login → call /users/me with the JWT and get the right user back.</div></td></tr>
+      </td><td><div class="tname">protectedEndpoint_withoutToken_returns401</div><div class="tdesc">GET /users/me with no token returns 401 Unauthorized.</div></td></tr>
+      </td><td><div class="tname">adminCreatedStaff_mustSetPasswordBeforeLogin</div><div class="tdesc">Admin creates a supervisor (no password) → login blocked (403) → set-password (200) → login works (200) → second set-password blocked (403).</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">RbacIntegrationTest</div>
+        <div class="suite-pkg">com.civicdesk.module.iam.integration</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">Integration · RBAC</span>
+        <span class="pill">5 tests</span>
+        <!-- <span class="badge">5 / 5 PASS</span> -->
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">admin_canListUsers</div><div class="tdesc">A real ADM token can GET /users (200).</div></td></tr>
+      </td><td><div class="tname">citizen_cannotListUsers_returns403</div><div class="tdesc">A citizen token is forbidden from GET /users (403).</div></td></tr>
+      </td><td><div class="tname">admin_createsSupervisor_returns201</div><div class="tdesc">Admin creates a supervisor in a real seeded department → 201 with "User created successfully".</div></td></tr>
+      </td><td><div class="tname">admin_createsSupervisor_withUnknownDepartment_returns400</div><div class="tdesc">Admin creating a supervisor in a non-existent department → 400 Bad Request.</div></td></tr>
+      </td><td><div class="tname">protectedEndpoint_withoutToken_returns401</div><div class="tdesc">GET /users with no token returns 401 Unauthorized.</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <!-- ============ Context ============ -->
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">CivicDeskApplicationTests</div>
+        <div class="suite-pkg">com.civicdesk</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">Smoke · @SpringBootTest</span>
+        <span class="pill">1 test</span>
+        <!-- <span class="badge">1 / 1 PASS</span> -->
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">contextLoads</div><div class="tdesc">The full Spring application context boots successfully under the "test" profile.</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <footer>
+    Run with <code>./mvnw test</code> (Windows: <code>.\mvnw.cmd test</code>). Detailed results in <code>target/surefire-reports/</code>.
+  </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CivicDesk — Application Flow & Checkpoints</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --panel-2: #273449;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --green: #34d399;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --purple: #a78bfa;
+    --border: #334155;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+  }
+  header {
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+  }
+  header h1 { margin: 0 0 4px; font-size: 26px; }
+  header p { margin: 0; color: var(--muted); }
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 600;
+    padding: 2px 10px; border-radius: 999px; margin-left: 8px;
+    background: rgba(56,189,248,.15); color: var(--accent);
+    border: 1px solid rgba(56,189,248,.4); vertical-align: middle;
+  }
+  main { padding: 24px 32px 60px; max-width: 1200px; margin: 0 auto; }
+  section { margin-bottom: 40px; }
+  h2 {
+    font-size: 18px; margin: 0 0 14px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border); color: var(--accent);
+  }
+  .diagram {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; overflow-x: auto;
+  }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px;
+    font-size: 13px; color: var(--muted);
+  }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px;
+  }
+  .card h3 { margin: 0 0 6px; font-size: 14px; }
+  .card .cp {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--amber);
+  }
+  .card ul { margin: 8px 0 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+  code {
+    background: var(--panel-2); padding: 1px 6px; border-radius: 4px;
+    font-size: 12px; color: #fcd34d;
+  }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>CivicDesk — Application Flow &amp; Security Checkpoints <span class="badge">IAM Module</span></h1>
+  <p>Spring Boot · JWT (stateless) · Role-Based Access Control · Audit logging</p>
+</header>
+
+<main>
+  <!-- ============ 1. REQUEST LIFECYCLE ============ -->
+  <section>
+    <h2>1 · Request Lifecycle &amp; Checkpoints</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TD
+    A([Client / Postman / Frontend]) --> B[HTTP Request]
+    B --> CORS{{"CHECKPOINT 1<br/>CORS Filter"}}
+    CORS --> JWT{{"CHECKPOINT 2<br/>JwtAuthFilter"}}
+
+    JWT --> HASTOK{Authorization:<br/>Bearer token?}
+    HASTOK -- No --> PUBCHK{Public<br/>endpoint?}
+    HASTOK -- Yes --> VALID{Token valid?}
+
+    VALID -- No --> E401[/"401 Unauthorized"/]:::err
+    VALID -- Yes --> SETCTX["Set SecurityContext<br/>userId + ROLE_*"]
+    SETCTX --> SLIDE{"&le; 10 min left?"}
+    SLIDE -- Yes --> REFRESH["Issue fresh 30-min token<br/>on Authorization header"]
+    SLIDE -- No --> AUTHZ
+    REFRESH --> AUTHZ
+
+    PUBCHK -- Yes --> CTRL
+    PUBCHK -- No --> AUTHZ{{"CHECKPOINT 3<br/>authorizeHttpRequests"}}
+    AUTHZ -- "not authenticated" --> E401
+    AUTHZ -- "authenticated" --> RBAC{{"CHECKPOINT 4<br/>@PreAuthorize (RBAC)"}}
+    RBAC -- "role mismatch" --> E403[/"403 Forbidden"/]:::err
+    RBAC -- "role ok" --> CTRL
+
+    CTRL["Controller layer"] --> SVC["Service layer<br/>(business rules)"]
+    SVC --> CHK5{{"CHECKPOINT 5<br/>Domain rules: status,<br/>passwordSet, ownership"}}
+    CHK5 --> REPO[("Repository / DB")]
+    SVC --> AUD[["Audit log entry"]]:::audit
+    REPO --> RESP[/"ApiResponse JSON"/]:::ok
+    AUD --> RESP
+
+    EXC{{"GlobalExceptionHandler"}}:::err
+    SVC -. throws .-> EXC
+    EXC -. "structured ErrorResponse" .-> RESP
+
+    classDef err fill:#7f1d1d,stroke:#f87171,color:#fee2e2;
+    classDef ok fill:#065f46,stroke:#34d399,color:#d1fae5;
+    classDef audit fill:#4c1d95,stroke:#a78bfa,color:#ede9fe;
+      </pre>
+    </div>
+    <div class="legend">
+      <span><i class="dot" style="background:#fbbf24"></i> Checkpoint / gate</span>
+      <span><i class="dot" style="background:#34d399"></i> Success response</span>
+      <span><i class="dot" style="background:#f87171"></i> Error / rejection</span>
+      <span><i class="dot" style="background:#a78bfa"></i> Audit logging</span>
+    </div>
+  </section>
+
+  <!-- ============ 2. AUTH FLOWS ============ -->
+  <section>
+    <h2>2 · Authentication Flows</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TD
+    START([POST /auth/*]) --> WHICH{Which endpoint?}
+
+    WHICH -- "/register" --> R1{Email exists?}
+    R1 -- Yes --> RX[/"409 DuplicateEmail"/]:::err
+    R1 -- No --> R2["Hash password (BCrypt)<br/>role = CITIZEN, status = ACTIVE"] --> R3[Save user + audit REGISTER] --> ROK[/"201 Created"/]:::ok
+
+    WHICH -- "/citizen/login" --> C1[authenticate email+password]
+    WHICH -- "/staff/login" --> C1
+    C1 --> A1{Password set?}
+    A1 -- No --> AX1[/"PasswordNotSet"/]:::err
+    A1 -- Yes --> A2{Password matches?}
+    A2 -- No --> AX2[/"BadCredentials"/]:::err
+    A2 -- Yes --> A3{Account suspended?}
+    A3 -- Yes --> AX3[/"AccountSuspended"/]:::err
+    A3 -- No --> A4{Right portal<br/>for role?}
+    A4 -- No --> AX4[/"403 Forbidden"/]:::err
+    A4 -- Yes --> A5["Issue JWT + audit LOGIN"] --> AOK[/"200 + AuthResponse"/]:::ok
+
+    WHICH -- "/setPassword" --> S1{User found?}
+    S1 -- No --> SX1[/"404 NotFound"/]:::err
+    S1 -- Yes --> S2{Already set?}
+    S2 -- Yes --> SX2[/"Forbidden"/]:::err
+    S2 -- No --> S3{">= 8 chars?"}
+    S3 -- No --> SX3[/"BadRequest"/]:::err
+    S3 -- Yes --> S4[Hash + mark set + audit] --> SOK[/"200 OK"/]:::ok
+
+    classDef err fill:#7f1d1d,stroke:#f87171,color:#fee2e2;
+    classDef ok fill:#065f46,stroke:#34d399,color:#d1fae5;
+      </pre>
+    </div>
+  </section>
+
+  <!-- ============ 3. RBAC MAP ============ -->
+  <section>
+    <h2>3 · Role-Based Access Map</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+    ADMIN([ADMIN]):::role
+    SUP([DEPT_SUPERVISOR]):::role
+    COMP([COMPLIANCE_OFFICER]):::role
+    STAFF([FIELD_OFFICER / ENGINEER]):::role
+    CIT([CITIZEN]):::role
+
+    ADMIN --> U1["POST /users<br/>(create DEPT_SUPERVISOR)"]
+    ADMIN --> U2["PUT /users/{id}/status"]
+    ADMIN --> U3[GET /users]
+    ADMIN --> D1[GET /departments]
+    ADMIN --> L1[GET /auditLogs]
+
+    SUP --> U1b["POST /users<br/>(create dept staff)"]
+    SUP --> U3
+    SUP --> D1
+
+    COMP --> L1
+    STAFF --> ME["GET /users/me"]
+    CIT --> ME
+    ADMIN --> ME
+    SUP --> ME
+    COMP --> ME
+
+    classDef role fill:#1e3a8a,stroke:#60a5fa,color:#dbeafe,font-weight:bold;
+      </pre>
+    </div>
+  </section>
+
+  <!-- ============ CHECKPOINT REFERENCE ============ -->
+  <section>
+    <h2>Checkpoint Reference</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="cp">Checkpoint 1 — CORS</div>
+        <h3>CorsConfig</h3>
+        <ul><li>Validates origin before processing</li><li>Exposes <code>Authorization</code> header for token refresh</li></ul>
+      </div>
+      <div class="card">
+        <div class="cp">Checkpoint 2 — JwtAuthFilter</div>
+        <h3>Token validation</h3>
+        <ul>
+          <li>Reads <code>Authorization: Bearer &lt;jwt&gt;</code></li>
+          <li>Invalid/expired → <code>401</code></li>
+          <li>Populates <code>SecurityContext</code> with userId + <code>ROLE_*</code></li>
+          <li>Sliding expiry: refresh when &le; 10 min left</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="cp">Checkpoint 3 — URL Authorization</div>
+        <h3>SecurityConfig</h3>
+        <ul>
+          <li>Stateless sessions, CSRF disabled</li>
+          <li><code>permitAll</code>: register, logins, setPassword, Swagger</li>
+          <li>All else → <code>authenticated()</code></li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="cp">Checkpoint 4 — Method RBAC</div>
+        <h3>@PreAuthorize</h3>
+        <ul>
+          <li><code>hasRole('ADMIN')</code> — status updates</li>
+          <li><code>hasAnyRole('ADMIN','DEPT_SUPERVISOR')</code> — user mgmt</li>
+          <li><code>hasAnyRole('ADMIN','COMPLIANCE_OFFICER')</code> — audit logs</li>
+          <li>Mismatch → <code>403</code></li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="cp">Checkpoint 5 — Domain Rules</div>
+        <h3>Service layer</h3>
+        <ul>
+          <li>Account status (ACTIVE / SUSPENDED)</li>
+          <li><code>passwordSet</code> first-login enforcement</li>
+          <li>Department-scoped creation rules</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="cp">Cross-cutting</div>
+        <h3>GlobalExceptionHandler &amp; Audit</h3>
+        <ul>
+          <li>Maps exceptions → structured <code>ErrorResponse</code></li>
+          <li>Audit log on REGISTER, LOGIN, LOGOUT, SET_PASSWORD, CREATE_USER, UPDATE_STATUS</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>Generated for CivicDesk · <code>com.civicdesk</code> · open in any browser</footer>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "dark",
+    flowchart: { curve: "basis", htmlLabels: true, useMaxWidth: true }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(.\\\\mvnw.cmd -q -B test 2>&1)",
+      "PowerShell(.\\\\mvnw.cmd -B test 2>&1)",
+      "PowerShell(.\\\\mvnw.cmd -B clean test 2>&1)",
+      "Bash(./mvnw -q -B clean test)"
+    ]
+  }
+}

@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,15 +17,21 @@ import com.civicdesk.common.exception.grievance.GrievanceCreationException;
 import com.civicdesk.common.exception.grievance.GrievanceNotFoundException;
 import com.civicdesk.common.exception.grievance.InvalidGrievanceDataException;
 import com.civicdesk.common.exception.grievance.InvalidUserRoleException;
+import com.civicdesk.common.response.ApiResponse;
 import com.civicdesk.common.response.ErrorResponse;
 
 /**
  * Central exception handler. Every controller in the application routes its
- * failures through here so that clients always receive a consistent
- * {@link ErrorResponse} body with the appropriate HTTP status.
+ * failures through here so that clients always receive a consistent error body.
+ *
+ * <p>Grievance-module failures are returned as {@link ErrorResponse}; IAM-module
+ * failures are returned as {@link ApiResponse}. Unifying these two error shapes
+ * is a follow-up the team should align on.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    // --- Grievance module ---
 
     @ExceptionHandler(GrievanceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleGrievanceNotFound(
@@ -33,7 +40,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({InvalidGrievanceDataException.class, InvalidUserRoleException.class})
-    public ResponseEntity<ErrorResponse> handleBadRequest(
+    public ResponseEntity<ErrorResponse> handleGrievanceBadRequest(
             RuntimeException ex, WebRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
@@ -69,6 +76,64 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.INTERNAL_SERVER_ERROR,
                 "An unexpected error occurred. Please try again later.", request);
     }
+
+    // --- IAM module ---
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiResponse> handleBadCredentials(BadCredentialsException e) {
+        return ResponseEntity.status(401).body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(TokenExpiredException.class)
+    public ResponseEntity<ApiResponse> handleTokenExpired(TokenExpiredException e) {
+        return ResponseEntity.status(401).body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiResponse> handleForbidden(ForbiddenException e) {
+        return ResponseEntity.status(403).body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse> handleAccessDenied(AccessDeniedException e) {
+        // Raised by @PreAuthorize when a caller's role is not permitted on an endpoint.
+        return ResponseEntity.status(403).body(ApiResponse.error("Access denied"));
+    }
+
+    @ExceptionHandler(PasswordNotSetException.class)
+    public ResponseEntity<ApiResponse> handlePasswordNotSet(PasswordNotSetException e) {
+        // Account exists but the owner hasn't set a password yet.
+        return ResponseEntity.status(403).body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ApiResponse> handleBadRequest(BadRequestException e) {
+        return ResponseEntity.status(400).body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(AccountSuspendedException.class)
+    public ResponseEntity<ApiResponse> handleSuspended(AccountSuspendedException e) {
+        // 423 Locked — the account exists and credentials are valid, but it is suspended.
+        return ResponseEntity.status(423).body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(AccountInactiveException.class)
+    public ResponseEntity<ApiResponse> handleInactive(AccountInactiveException e) {
+        // 403 Forbidden — credentials are valid but the account is deactivated (neutral lifecycle state).
+        return ResponseEntity.status(403).body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(DuplicateEmailException.class)
+    public ResponseEntity<ApiResponse> handleDuplicate(DuplicateEmailException e) {
+        return ResponseEntity.status(409).body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiResponse> handleNotFound(ResourceNotFoundException e) {
+        return ResponseEntity.status(404).body(ApiResponse.error(e.getMessage()));
+    }
+
+    // --- Helpers (grievance ErrorResponse builder) ---
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, WebRequest request) {
         ErrorResponse body = ErrorResponse.builder()

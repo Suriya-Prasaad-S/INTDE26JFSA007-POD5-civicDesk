@@ -1,70 +1,77 @@
-# CivicDesk — `main` (project-structure template)
+# CivicDesk — Module 2.1: Identity & Access Management
 
-This is the **shared main branch**: a project-structure template only — **no business
-code**. Nobody commits feature code directly to `main`. Each module owner creates their
-own branch, fills in their module folder using this layout, and merges back.
+Foundation module for CivicDesk. Provides citizen/staff authentication, JWT issuance,
+role-based access control, user administration, and audit logging.
 
-> The folders are kept by empty `.gitkeep` placeholders. Delete the placeholder once you
-> add real files to a folder.
+## Stack
 
-## Folder structure
+- Spring Boot 3.4.x + Spring Security 6
+- MySQL 8 (runtime) · H2 (tests)
+- JWT HS256 (stateless) via jjwt 0.12.3
+- BCrypt password hashing (cost 10)
+- UUID v4 primary keys (`CHAR(36)`)
 
-```
-civicdesk-main/
-├── pom.xml                     # shared build + dependencies (the common build file)
-├── mvnw, mvnw.cmd, .mvn/       # Maven wrapper
-├── Dockerfile, .gitignore
-└── src/
-    ├── main/
-    │   ├── java/com/civicdesk/
-    │   │   ├── config/                 # shared @Configuration (security, cors, openapi, …)
-    │   │   ├── common/                 # cross-module shared building blocks
-    │   │   │   ├── exception/          #   global handler + shared exception types
-    │   │   │   ├── response/           #   shared response envelopes
-    │   │   │   └── util/               #   shared utilities (jwt, security context, …)
-    │   │   └── module/                 # ONE folder per module — owners fill these in
-    │   │       ├── citizen/            # Module 2.2 — Pruthiviraj
-    │   │       ├── servicerequest/     # Module 2.3 — Haresh
-    │   │       ├── permit/             # Module 2.4 — Amirtha
-    │   │       ├── grievance/          # Module 2.5 — Anand
-    │   │       └── analytics/          # Module 2.7 — Suriya
-    │   └── resources/
-    │       └── application.properties  # config template (placeholders, no secrets)
-    └── test/
-        └── java/com/civicdesk/module/<module>/{controller,service,repository,integration}/
+> **Note on the framework version:** the project was scaffolded with Spring Boot
+> `4.0.6`, but the assignment spec and all provided code target **Spring Boot 3.x /
+> Spring Security 6**. `pom.xml` is therefore pinned to `3.4.1` so the documented
+> APIs (lambda security DSL, `@EnableMethodSecurity`, jjwt 0.12.3) compile as written.
+
+## Running
+
+```bash
+# The civicdesk database is auto-created on first start
+# (JDBC URL has ?createDatabaseIfNotExist=true; ddl-auto=update builds the tables).
+# Set spring.datasource.username / password in src/main/resources/application.properties, then:
+./mvnw spring-boot:run                              # default profile
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev   # verbose SQL
 ```
 
-### Standard layers inside every module
-Each `module/<name>/` folder follows the same layout:
+App starts on `http://localhost:8081`.
+
+- **Swagger UI:** http://localhost:8081/swagger-ui.html (use *Authorize* to paste a JWT)
+- A default **ADMIN** is seeded on first startup by `DataSeeder` from the
+  `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` / `ADMIN_PHONE` env vars
+  (local defaults: `admin@civicdesk.gov` / `Admin@12345`).
+
+### Profiles
+- `dev` — `ddl-auto=update`, SQL logging on.
+- `prod` — `ddl-auto=validate`, no SQL logging; DB + JWT secret come from env vars.
+
+### Docker
+```bash
+docker build -t civicdesk-iam .
+docker run -p 8081:8081 --env-file .env civicdesk-iam
+```
+
+## Tests
+
+```bash
+./mvnw test
+```
+
+Tests run against in-memory H2 using the `test` profile (`application-test.properties`).
+
+## Project layout
 
 ```
-module/<name>/
-├── controller/      # @RestController — HTTP endpoints
-├── service/         # interfaces + @Service implementations (business logic)
-├── repository/      # Spring Data @Repository interfaces
-├── entity/          # @Entity JPA classes
-└── dto/
-    ├── request/     # request bodies
-    └── response/    # response payloads
+com.civicdesk
+├── CivicDeskApplication.java
+├── config/        SecurityConfig · JwtConfig · CorsConfig · OpenApiConfig · DataSeeder
+├── common/
+│   ├── exception/  GlobalExceptionHandler + domain exceptions (401/403/404/409/400/423)
+│   ├── response/   ApiResponse (unified, with statusCode) · ErrorResponse · PageResponse
+│   └── util/       JwtUtil · NationalIdUtil · SecurityContextUtil
+└── module/iam/
+    ├── controller/ AuthController · UserController · AuditLogController
+    ├── service/    Auth / User / Audit services (interface + impl)
+    ├── repository/  UserRepository · AuditLogRepository
+    ├── entity/     User · AuditLog
+    ├── dto/
+    │   ├── request/   Register · CitizenLogin · StaffLogin · CreateUser · UpdateUserStatus
+    │   └── response/  AuthResponse · UserResponse · AuditLogResponse
+    ├── enums/      Role · UserStatus · AuditAction · AuditModule  (share with team Day 1)
+    └── security/   JwtAuthFilter
 ```
 
-And the matching test layout under `src/test/java/com/civicdesk/module/<name>/`:
-`controller/` · `service/` · `repository/` · `integration/`.
 
-## How a teammate uses this
 
-1. Create your branch off `main`.
-2. Work **only** inside your `module/<name>/...` folders, plus add genuinely shared
-   pieces under `config/` or `common/` (agree on those with the team first).
-3. Beans are auto-detected — the app component-scans `com.civicdesk`, so a
-   `@RestController` / `@Service` / `@Entity` you add is picked up with no extra wiring.
-4. Put tests in the mirrored `src/test/.../module/<name>/...` folders.
-5. Open a PR back into `main`.
-
-## Notes
-- `main` intentionally has **no application bootstrap class and no module code** — those
-  arrive as modules are merged in. `./mvnw compile` works on the empty skeleton;
-  `./mvnw package`/`spring-boot:run` only work once a `@SpringBootApplication` class exists.
-- Keep secrets out of the shared `application.properties`; use environment variables on
-  your branch/deploy.
-- Stack: Java 21, Spring Boot 3.4.x, Spring Security 6 (versions pinned in `pom.xml`).
