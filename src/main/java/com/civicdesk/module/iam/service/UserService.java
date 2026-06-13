@@ -12,5 +12,7 @@ public interface UserService {
 
     UserResponse updateStatus(String userId, String status);
 
-    PageResponse<UserResponse> getUsers(String callerRole, String callerUserId, int page, int size);
+    PageResponse<UserResponse> getUsers(String callerRole, String callerUserId,
+                                        String roleFilter, String statusFilter, String departmentIdFilter,
+                                        int page, int size);
 }

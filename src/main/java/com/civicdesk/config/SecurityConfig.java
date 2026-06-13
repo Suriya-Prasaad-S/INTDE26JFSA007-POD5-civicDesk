@@ -30,10 +30,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/register").permitAll()
-                        .requestMatchers("/auth/citizen/login").permitAll()
-                        .requestMatchers("/auth/staff/login").permitAll()
-                        .requestMatchers("/auth/setPassword").permitAll()
+                        .requestMatchers("/iam/auth/register").permitAll()
+                        .requestMatchers("/iam/auth/citizen/login").permitAll()
+                        .requestMatchers("/iam/auth/staff/login").permitAll()
+                        .requestMatchers("/iam/auth/setPassword").permitAll()
                         // Swagger / OpenAPI UI
                         .requestMatchers(
                                 "/swagger-ui.html",

@@ -23,7 +23,7 @@ import jakarta.validation.Valid;
  * a department that has no field officer).
  */
 @RestController
-@RequestMapping("civicDesk/grievance")
+@RequestMapping("/grievance")
 @PreAuthorize("hasRole('FO')")
 public class FieldOfficerGrievanceController {
 

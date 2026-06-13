@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/auditLogs")
+@RequestMapping("/iam/auditLogs")
 public class AuditLogController {
 
     private final AuditService auditService;
@@ -21,12 +21,20 @@ public class AuditLogController {
         this.auditService = auditService;
     }
 
+    /**
+     * Lists audit entries newest-first. Optional {@code userId}, {@code action} and
+     * {@code module} query params narrow the results (any combination); each maps to an
+     * indexed column on {@code audit_log}.
+     */
     @GetMapping
     @PreAuthorize("hasAnyRole('ADM', 'CO')")
     public ResponseEntity<ApiResponse> getAuditLogs(
+            @RequestParam(required = false) String userId,
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) String module,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        PageResponse<AuditLogResponse> logs = auditService.getAll(page, size);
+        PageResponse<AuditLogResponse> logs = auditService.getAll(userId, action, module, page, size);
         return ResponseEntity.ok(ApiResponse.data(logs));
     }
 }

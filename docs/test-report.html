@@ -106,15 +106,15 @@
 <div class="wrap">
   <header>
     <h1>CivicDesk IAM — Test Case Report</h1>
-    <div class="sub">Module 2.1 — Identity &amp; Access Management &nbsp;·&nbsp; Spring Boot 3.4.1 / Java 21 &nbsp;·&nbsp; JUnit 5 + Mockito + MockMvc &nbsp;·&nbsp; generated 2026-06-09</div>
+    <div class="sub">Module 2.1 — Identity &amp; Access Management &nbsp;·&nbsp; Spring Boot 3.4.1 / Java 21 &nbsp;·&nbsp; JUnit 5 + Mockito + MockMvc &nbsp;·&nbsp; updated 2026-06-11</div>
   </header>
 
   <section class="summary">
-    <div class="card"><div class="num blue">52</div><div class="lbl">Total tests</div></div>
-    <div class="card"><div class="num">14</div><div class="lbl">Test classes</div></div>
+    <div class="card"><div class="num blue">77</div><div class="lbl">Total test cases</div></div>
+    <div class="card"><div class="num">17</div><div class="lbl">Test classes</div></div>
   </section>
   <div class="bar"><span></span></div>
-  <p class="legend" style="margin-top:24px">All 52 tests pass. Click a suite to expand its cases.</p>
+  <p class="legend" style="margin-top:24px">Reference catalogue of the JUnit test cases written for this module (not a pass/fail run report). Click a suite to expand its cases.</p>
 
   <!-- ============ Unit: Utilities ============ -->
   <details class="suite" open>
@@ -299,13 +299,61 @@
       </span>
       <span class="suite-meta">
         <span class="pill kind">Web slice · @WebMvcTest</span>
-        <span class="pill">2 tests</span>
-        <!-- <span class="badge">2 / 2 PASS</span> -->
+        <span class="pill">3 tests</span>
       </span>
     </summary>
     <table><tbody>
       </td><td><div class="tname">admin_canReadAuditLogs_returns200</div><div class="tdesc">As ADM, GET /auditLogs returns 200.</div></td></tr>
       </td><td><div class="tname">complianceOfficer_canReadAuditLogs_returns200</div><div class="tdesc">As Compliance Officer (CO), GET /auditLogs returns 200.</div></td></tr>
+      </td><td><div class="tname">auditLogs_filterParamsArePassedToService</div><div class="tdesc">The userId / action / module / page / size query params are forwarded verbatim to auditService.getAll(...) (verified with eq() matchers).</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">AuthRequestValidationTest</div>
+        <div class="suite-pkg">com.civicdesk.module.iam.controller</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">Web slice · @WebMvcTest</span>
+        <span class="pill">10 tests</span>
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">register_validPayload_passesValidationAndReachesService</div><div class="tdesc">A fully valid registration body passes bean validation and returns 201.</div></td></tr>
+      </td><td><div class="tname">register_phoneNotTenDigits_returns400</div><div class="tdesc">A phone that is not 10 digits → 400 "phone must be a valid 10-digit Indian mobile number"; service never called.</div></td></tr>
+      </td><td><div class="tname">register_phoneStartsBelowSix_returns400</div><div class="tdesc">A phone starting below 6 (Indian rule) → 400 with the same phone message.</div></td></tr>
+      </td><td><div class="tname">register_malformedEmail_returns400</div><div class="tdesc">A malformed email → 400 "email must be a valid email address".</div></td></tr>
+      </td><td><div class="tname">register_shortPassword_returns400</div><div class="tdesc">A password under 8 chars → 400 "password must be between 8 and 72 characters".</div></td></tr>
+      </td><td><div class="tname">register_invalidGenderWhenPresent_returns400</div><div class="tdesc">An out-of-range gender → 400 "gender must be MALE, FEMALE or OTHER".</div></td></tr>
+      </td><td><div class="tname">register_invalidDateOfBirthWhenPresent_returns400</div><div class="tdesc">A non-ISO dateOfBirth → 400 "dateOfBirth must be in format YYYY-MM-DD".</div></td></tr>
+      </td><td><div class="tname">register_optionalProfileFieldsOmitted_isValid</div><div class="tdesc">Omitting the optional profile fields (gender/dob/nationalId/address/ward/zone) still passes → 201.</div></td></tr>
+      </td><td><div class="tname">staffLogin_malformedEmail_returns400</div><div class="tdesc">POST /auth/staff/login with a malformed email → 400 with the email message; service never called.</div></td></tr>
+      </td><td><div class="tname">setPassword_shortNewPassword_returns400</div><div class="tdesc">POST /auth/setPassword with a short newPassword → 400 "newPassword must be between 8 and 72 characters".</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">UserRequestValidationTest</div>
+        <div class="suite-pkg">com.civicdesk.module.iam.controller</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">Web slice · @WebMvcTest</span>
+        <span class="pill">6 tests</span>
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">createUser_invalidPhone_returns400</div><div class="tdesc">POST /users with an invalid phone → 400 "phone must be a valid 10-digit Indian mobile number"; service never called.</div></td></tr>
+      </td><td><div class="tname">createUser_blankPhone_returns400</div><div class="tdesc">A blank phone → 400 "phone is required".</div></td></tr>
+      </td><td><div class="tname">createUser_unknownRole_returns400</div><div class="tdesc">An unknown role → 400 "role must be one of: DS, FO, ENG, CO".</div></td></tr>
+      </td><td><div class="tname">createUser_malformedEmail_returns400</div><div class="tdesc">A malformed email → 400 "email must be a valid email address".</div></td></tr>
+      </td><td><div class="tname">createUser_blankName_returns400</div><div class="tdesc">A blank name → 400 "name is required".</div></td></tr>
+      </td><td><div class="tname">updateStatus_invalidStatus_returns400</div><div class="tdesc">PUT /users/{id}/status with an invalid status → 400 "status must be one of ..."; service never called.</div></td></tr>
     </tbody></table>
   </details>
 
@@ -339,13 +387,16 @@
       </span>
       <span class="suite-meta">
         <span class="pill kind">JPA slice · @DataJpaTest</span>
-        <span class="pill">2 tests</span>
-        <!-- <span class="badge">2 / 2 PASS</span> -->
+        <span class="pill">6 tests</span>
       </span>
     </summary>
     <table><tbody>
       </td><td><div class="tname">findByUserId_returnsOnlyThatUsersEntries</div><div class="tdesc">findByUserId("user-1") returns only that user's 2 entries (of 3 seeded).</div></td></tr>
       </td><td><div class="tname">findAllByOrderByTimestampDesc_returnsAllEntries</div><div class="tdesc">findAllByOrderByTimestampDesc returns all 3 seeded entries.</div></td></tr>
+      </td><td><div class="tname">specification_filtersByAction</div><div class="tdesc">AuditLogSpecifications.hasAction("LOGIN") returns only the single LOGIN entry.</div></td></tr>
+      </td><td><div class="tname">specification_filtersByModule</div><div class="tdesc">AuditLogSpecifications.hasModule("IAM") returns the 2 IAM entries.</div></td></tr>
+      </td><td><div class="tname">specification_filtersByLowercaseValue_isNormalized</div><div class="tdesc">A lower-case filter ("grievance") still matches the upper-case stored value — case is normalized.</div></td></tr>
+      </td><td><div class="tname">specification_combinesUserIdAndAction</div><div class="tdesc">hasUserId("user-1").and(hasAction("LOGOUT")) narrows to the single matching entry.</div></td></tr>
     </tbody></table>
   </details>
 
@@ -389,6 +440,26 @@
       </td><td><div class="tname">admin_createsSupervisor_returns201</div><div class="tdesc">Admin creates a supervisor in a real seeded department → 201 with "User created successfully".</div></td></tr>
       </td><td><div class="tname">admin_createsSupervisor_withUnknownDepartment_returns400</div><div class="tdesc">Admin creating a supervisor in a non-existent department → 400 Bad Request.</div></td></tr>
       </td><td><div class="tname">protectedEndpoint_withoutToken_returns401</div><div class="tdesc">GET /users with no token returns 401 Unauthorized.</div></td></tr>
+    </tbody></table>
+  </details>
+
+  <details class="suite">
+    <summary>
+      <span class="chev">▶</span>
+      <span>
+        <div class="suite-name">IdGenerationIntegrationTest</div>
+        <div class="suite-pkg">com.civicdesk.module.iam.integration</div>
+      </span>
+      <span class="suite-meta">
+        <span class="pill kind">Integration · id scheme</span>
+        <span class="pill">4 tests</span>
+      </span>
+    </summary>
+    <table><tbody>
+      </td><td><div class="tname">seededAdmin_getsFirstSequentialUserId</div><div class="tdesc">The seeded ADM (first users row) takes the start value userId "10000001".</div></td></tr>
+      </td><td><div class="tname">persistedUsers_getConsecutiveNumericStringIds</div><div class="tdesc">Two newly persisted users get numeric-string ids ≥ 10000001 that increment by exactly 1.</div></td></tr>
+      </td><td><div class="tname">auditLog_getsNumericStringIds</div><div class="tdesc">A logged audit entry is assigned a numeric-string auditId.</div></td></tr>
+      </td><td><div class="tname">seededDepartments_useDptPrefixedIds</div><div class="tdesc">All 6 seeded departments use the DPT## business-key form; "Infrastructure" (first in the seeder) is DPT01.</div></td></tr>
     </tbody></table>
   </details>
 

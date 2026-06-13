@@ -21,7 +21,7 @@ import jakarta.validation.Valid;
 
 /** Citizen-facing grievance endpoints. All require the {@code CIT} role. */
 @RestController
-@RequestMapping("civicDesk/grievance")
+@RequestMapping("/grievance")
 @PreAuthorize("hasRole('CIT')")
 public class CitizenGrievanceController {
 

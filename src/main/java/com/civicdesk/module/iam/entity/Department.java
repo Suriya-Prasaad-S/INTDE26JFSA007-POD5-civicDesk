@@ -2,8 +2,6 @@ package com.civicdesk.module.iam.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
@@ -11,14 +9,17 @@ import jakarta.persistence.Table;
  * A municipal department. A user with role DS is assigned to one
  * department, and that department points back to its supervisor (one-to-one)
  * via {@code department_supervisor_id}.
+ *
+ * <p>The id is a human-readable business key in the form {@code DPT01}, {@code DPT02}, …
+ * assigned by {@code DataSeeder} (the only creator of departments) rather than a
+ * generated UUID.
  */
 @Entity
 @Table(name = "departments")
 public class Department {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "departmentId", length = 36, updatable = false, nullable = false)
+    @Column(name = "departmentId", length = 10, updatable = false, nullable = false)
     private String departmentId;
 
     @Column(nullable = false, unique = true, length = 100)

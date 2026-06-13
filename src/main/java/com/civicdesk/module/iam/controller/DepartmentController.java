@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** Read-only listing so an ADM can pick a valid departmentId when creating a supervisor. */
 @RestController
-@RequestMapping("/departments")
+@RequestMapping("/iam/departments")
 public class DepartmentController {
 
     private final DepartmentService departmentService;

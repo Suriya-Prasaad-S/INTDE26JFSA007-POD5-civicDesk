@@ -1,4 +1,4 @@
-package com.civicdesk.module.iam.controller;
+﻿package com.civicdesk.module.iam.controller;
 
 import com.civicdesk.module.iam.dto.request.CreateUserRequest;
 import com.civicdesk.module.iam.dto.response.UserResponse;
@@ -48,10 +48,11 @@ class UserControllerTest {
         CreateUserRequest req = new CreateUserRequest();
         req.setName("Meena");
         req.setEmail("meena@civicdesk.gov");
+        req.setPhone("9876543210");
         req.setRole("DS");
         req.setDepartmentId("dept-1");
 
-        mockMvc.perform(post("/users")
+        mockMvc.perform(post("/iam/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isCreated());
@@ -63,10 +64,12 @@ class UserControllerTest {
     @Test
     @WithMockUser(username = "admin-id", roles = "ADM")
     void adminListsUsers_returns200() throws Exception {
-        when(userService.getUsers(anyString(), anyString(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt()))
+        when(userService.getUsers(anyString(), anyString(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt()))
                 .thenReturn(new com.civicdesk.common.response.PageResponse<>(java.util.List.of(), 0, 0, 0));
 
-        mockMvc.perform(get("/users"))
+        mockMvc.perform(get("/iam/users"))
                 .andExpect(status().isOk());
     }
 }

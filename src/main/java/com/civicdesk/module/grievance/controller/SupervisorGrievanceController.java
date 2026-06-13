@@ -18,7 +18,7 @@ import jakarta.validation.Valid;
 
 /** Department-supervisor grievance endpoints. All require the {@code DS} role. */
 @RestController
-@RequestMapping("civicDesk/grievance")
+@RequestMapping("/grievance")
 @PreAuthorize("hasRole('DS')")
 public class SupervisorGrievanceController {
 

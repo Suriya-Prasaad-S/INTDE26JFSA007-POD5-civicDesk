@@ -20,7 +20,7 @@ public enum Role {
     // Engineer
     ENG,
 
-    // Coordinator  
+    // Complience Officer  
     CO,
     
     // Admin

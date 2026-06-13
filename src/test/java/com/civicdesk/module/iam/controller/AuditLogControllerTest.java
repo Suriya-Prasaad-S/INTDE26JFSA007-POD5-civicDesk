@@ -1,4 +1,4 @@
-package com.civicdesk.module.iam.controller;
+﻿package com.civicdesk.module.iam.controller;
 
 import com.civicdesk.common.response.PageResponse;
 import com.civicdesk.module.iam.security.JwtAuthFilter;
@@ -13,7 +13,10 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -33,17 +36,34 @@ class AuditLogControllerTest {
     @Test
     @WithMockUser(username = "admin-id", roles = "ADM")
     void admin_canReadAuditLogs_returns200() throws Exception {
-        when(auditService.getAll(anyInt(), anyInt()))
+        when(auditService.getAll(any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new PageResponse<>(List.of(), 0, 0, 0));
-        mockMvc.perform(get("/auditLogs")).andExpect(status().isOk());
+        mockMvc.perform(get("/iam/auditLogs")).andExpect(status().isOk());
     }
 
     @Test
     @WithMockUser(username = "compliance-id", roles = "CO")
     void complianceOfficer_canReadAuditLogs_returns200() throws Exception {
-        when(auditService.getAll(anyInt(), anyInt()))
+        when(auditService.getAll(any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new PageResponse<>(List.of(), 0, 0, 0));
-        mockMvc.perform(get("/auditLogs")).andExpect(status().isOk());
+        mockMvc.perform(get("/iam/auditLogs")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "admin-id", roles = "ADM")
+    void auditLogs_filterParamsArePassedToService() throws Exception {
+        when(auditService.getAll(any(), any(), any(), anyInt(), anyInt()))
+                .thenReturn(new PageResponse<>(List.of(), 0, 0, 0));
+
+        mockMvc.perform(get("/iam/auditLogs")
+                        .param("userId", "10000001")
+                        .param("action", "LOGIN")
+                        .param("module", "IAM")
+                        .param("page", "2")
+                        .param("size", "50"))
+                .andExpect(status().isOk());
+
+        verify(auditService).getAll(eq("10000001"), eq("LOGIN"), eq("IAM"), eq(2), eq(50));
     }
 
     // NOTE: role denial (403) for this endpoint is verified end-to-end in RbacIntegrationTest;

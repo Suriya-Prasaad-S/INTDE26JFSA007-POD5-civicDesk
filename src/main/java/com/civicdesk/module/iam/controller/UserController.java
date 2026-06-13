@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/iam/users")
 public class UserController {
 
     private final UserService userService;
@@ -63,11 +63,14 @@ public class UserController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADM', 'DS')")
     public ResponseEntity<ApiResponse> getUsers(
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String departmentId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         String callerRole = SecurityContextUtil.getCurrentRole();
         String callerUserId = SecurityContextUtil.getCurrentUserId();
-        PageResponse<UserResponse> users = userService.getUsers(callerRole, callerUserId, page, size);
+        PageResponse<UserResponse> users = userService.getUsers(callerRole, callerUserId, role, status, departmentId, page, size);
         return ResponseEntity.ok(ApiResponse.data(users));
     }
 

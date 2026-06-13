@@ -1,11 +1,13 @@
 package com.civicdesk.module.iam.dto.request;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 /** Staff portal login â€” all roles except CIT. */
 public class StaffLoginRequest {
 
     @NotBlank(message = "email is required")
+    @Email(message = "email must be a valid email address")
     private String email;
 
     @NotBlank(message = "password is required")

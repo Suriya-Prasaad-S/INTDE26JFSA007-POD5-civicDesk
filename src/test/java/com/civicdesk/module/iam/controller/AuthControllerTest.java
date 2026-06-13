@@ -1,4 +1,17 @@
-package com.civicdesk.module.iam.controller;
+﻿package com.civicdesk.module.iam.controller;
+
+import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.civicdesk.module.iam.dto.request.CitizenLoginRequest;
 import com.civicdesk.module.iam.dto.request.RegisterRequest;
@@ -7,19 +20,6 @@ import com.civicdesk.module.iam.security.JwtAuthFilter;
 import com.civicdesk.module.iam.service.AuditService;
 import com.civicdesk.module.iam.service.AuthService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -44,7 +44,7 @@ class AuthControllerTest {
         AuthResponse mockResp = new AuthResponse("mock-token", "user-id", "CIT", 1800L);
         when(authService.citizenLogin(any(), any())).thenReturn(mockResp);
 
-        mockMvc.perform(post("/auth/citizen/login")
+        mockMvc.perform(post("/iam/auth/citizen/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CitizenLoginRequest("ravi@example.com", "Ravi@1234"))))
                 .andExpect(status().isOk())
@@ -59,7 +59,7 @@ class AuthControllerTest {
         RegisterRequest req = new RegisterRequest();
         req.setPassword("Ravi@1234");
 
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/iam/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest());

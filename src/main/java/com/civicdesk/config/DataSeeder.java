@@ -78,10 +78,28 @@ public class DataSeeder implements CommandLineRunner {
     private void seedDepartments() {
         for (String name : DEPARTMENTS) {
             if (!departmentRepository.existsByName(name)) {
-                departmentRepository.save(new Department(name));
-                log.info("Seeded department '{}'.", name);
+                Department dept = new Department(name);
+                dept.setDepartmentId(nextDepartmentId());
+                departmentRepository.save(dept);
+                log.info("Seeded department '{}' as '{}'.", name, dept.getDepartmentId());
             }
         }
+    }
+
+    /**
+     * Builds the next sequential department id ({@code DPT01}, {@code DPT02}, …) by
+     * scanning existing ids for the highest {@code DPT<n>} suffix and incrementing it.
+     * Ids that don't match the pattern are ignored, so the sequence is stable even if
+     * other id forms ever coexist.
+     */
+    private String nextDepartmentId() {
+        int max = departmentRepository.findAll().stream()
+                .map(Department::getDepartmentId)
+                .filter(id -> id != null && id.matches("DPT\\d+"))
+                .mapToInt(id -> Integer.parseInt(id.substring(3)))
+                .max()
+                .orElse(0);
+        return String.format("DPT%02d", max + 1);
     }
 
     private void seedAdmin() {

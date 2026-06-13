@@ -15,3 +15,4 @@ class CivicDeskApplicationTests {
 }
 
 // .\mvnw.cmd test
+//.\mvnw.cmd clean test

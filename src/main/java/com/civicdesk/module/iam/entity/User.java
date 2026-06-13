@@ -1,22 +1,41 @@
 package com.civicdesk.module.iam.entity;
 
+import com.civicdesk.common.id.NumericStringSequenceGenerator;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+// columnList values match the physical (camelCase) column names — this project uses
+// PhysicalNamingStrategyStandardImpl, so columns are NOT snake_cased.
 @Entity
-@Table(name = "users")
+@Table(name = "users", indexes = {
+    @Index(name = "idx_users_role",        columnList = "role"),
+    @Index(name = "idx_users_status",      columnList = "status"),
+    @Index(name = "idx_users_role_status", columnList = "role, status")
+})
 public class User {
 
+    // Sequential numeric id rendered as a String: 10000001, 10000002, … (was a UUID).
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(generator = "userIdSeq")
+    @GenericGenerator(
+            name = "userIdSeq",
+            type = NumericStringSequenceGenerator.class,
+            parameters = {
+                @Parameter(name = "sequence_name", value = "user_id_seq"),
+                @Parameter(name = "initial_value", value = "10000001"),
+                @Parameter(name = "increment_size", value = "1"),
+                @Parameter(name = "optimizer", value = "none")
+            })
     @Column(name = "userId", length = 36, updatable = false, nullable = false)
     private String userId;
 
