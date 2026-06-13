@@ -1,0 +1,197 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------< com.civicdesk:civicdesk >-----------------------
+[INFO] Building civicdesk-iam 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.4.1:run (default-cli) > test-compile @ civicdesk >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ civicdesk ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ civicdesk ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 46 source files with javac [debug parameters release 21] to target\classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ civicdesk ---
+[INFO] skip non existing resourceDirectory C:\Users\2506484\Documents\INTDE26JFSA007-POD5-civicDesk\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ civicdesk ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] 
+[INFO] <<< spring-boot:3.4.1:run (default-cli) < test-compile @ civicdesk <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.4.1:run (default-cli) @ civicdesk ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.4.1)
+
+2026-06-09T08:39:20.137+05:30  INFO 21464 --- [civicdesk] [           main] com.civicdesk.CivicDeskApplication       : Starting CivicDeskApplication using Java 21.0.2 with PID 21464 (C:\Users\2506484\Documents\INTDE26JFSA007-POD5-civicDesk\target\classes started by 2506484 in C:\Users\2506484\Documents\INTDE26JFSA007-POD5-civicDesk)
+2026-06-09T08:39:20.139+05:30  INFO 21464 --- [civicdesk] [           main] com.civicdesk.CivicDeskApplication       : No active profile set, falling back to 1 default profile: "default"
+2026-06-09T08:39:21.471+05:30  INFO 21464 --- [civicdesk] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-09T08:39:21.664+05:30  INFO 21464 --- [civicdesk] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 176 ms. Found 6 JPA repository interfaces.
+2026-06-09T08:39:23.193+05:30  INFO 21464 --- [civicdesk] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8082 (http)
+2026-06-09T08:39:23.220+05:30  INFO 21464 --- [civicdesk] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-09T08:39:23.221+05:30  INFO 21464 --- [civicdesk] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.34]
+2026-06-09T08:39:23.331+05:30  INFO 21464 --- [civicdesk] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-09T08:39:23.332+05:30  INFO 21464 --- [civicdesk] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3126 ms
+2026-06-09T08:39:23.749+05:30  INFO 21464 --- [civicdesk] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-09T08:39:23.867+05:30  INFO 21464 --- [civicdesk] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.4.Final
+2026-06-09T08:39:23.939+05:30  INFO 21464 --- [civicdesk] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-09T08:39:24.379+05:30  INFO 21464 --- [civicdesk] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-09T08:39:24.427+05:30  INFO 21464 --- [civicdesk] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-09T08:39:24.792+05:30  INFO 21464 --- [civicdesk] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@795eddda
+2026-06-09T08:39:24.795+05:30  INFO 21464 --- [civicdesk] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-09T08:39:24.935+05:30  INFO 21464 --- [civicdesk] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0.45
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-09T08:39:26.036+05:30  INFO 21464 --- [civicdesk] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: create table citizen_profile (citizenId varchar(50) not null, address TEXT, nationalId varchar(50), userId varchar(50) not null, ward varchar(50), zone varchar(50), primary key (citizenId)) engine=InnoDB
+Hibernate: create table departments (departmentId varchar(50) not null, departmentName varchar(150) not null, email varchar(150) not null, primary key (departmentId)) engine=InnoDB
+Hibernate: create table request_document (docId varchar(50) not null, documentType varchar(100) not null, filePath varchar(500) not null, uploadedDate datetime(6) not null, verificationStatus enum ('Pending','Rejected','Verified') not null, requestId varchar(50) not null, primary key (docId)) engine=InnoDB
+Hibernate: create table service_catalog (serviceId varchar(50) not null, category enum ('Certificate','Registration','Utility','Welfare') not null, fee decimal(10,2), processingDays integer not null, requiredDocuments TEXT, serviceName varchar(200) not null, status enum ('Active','Inactive') not null, departmentId varchar(50) not null, primary key (serviceId)) engine=InnoDB
+Hibernate: create table service_request (requestId varchar(50) not null, expectedCompletionDate date, fee decimal(10,2), status enum ('Approved','Completed','PendingDocuments','Rejected','Submitted','UnderReview') not null, submissionDate date not null, assignedOfficerId varchar(50), citizenId varchar(50) not null, serviceId varchar(50) not null, primary key (requestId)) engine=InnoDB
+Hibernate: create table users (userId varchar(50) not null, departmentId varchar(50), email varchar(150) not null, name varchar(100) not null, phone varchar(15), role varchar(30) not null, status varchar(20), primary key (userId)) engine=InnoDB
+Hibernate: alter table citizen_profile drop index UKifc3gqhdxyeka4qb3ttwr13vj
+Hibernate: alter table citizen_profile add constraint UKifc3gqhdxyeka4qb3ttwr13vj unique (userId)
+Hibernate: alter table users drop index UK6dotkott2kjsp8vw4d0m25fb7
+Hibernate: alter table users add constraint UK6dotkott2kjsp8vw4d0m25fb7 unique (email)
+Hibernate: alter table request_document add constraint FKje5j21hohfe0p6uq1s3ijqnur foreign key (requestId) references service_request (requestId)
+Hibernate: alter table service_catalog add constraint FK47e1bnvp96fxsahtfh5ds0hwf foreign key (departmentId) references departments (departmentId)
+Hibernate: alter table service_request add constraint FKs93et7343r70sxo3erfjnlbe3 foreign key (assignedOfficerId) references users (userId)
+Hibernate: alter table service_request add constraint FKtqbt8qej9helruclc72dg9f8s foreign key (citizenId) references citizen_profile (citizenId)
+Hibernate: alter table service_request add constraint FKf4uj3m9ag3hwcpl69ap3vicyy foreign key (serviceId) references service_catalog (serviceId)
+2026-06-09T08:39:27.490+05:30  INFO 21464 --- [civicdesk] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-09T08:39:28.641+05:30  WARN 21464 --- [civicdesk] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-09T08:39:29.738+05:30  INFO 21464 --- [civicdesk] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-06-09T08:39:29.847+05:30  INFO 21464 --- [civicdesk] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8082 (http) with context path '/'
+2026-06-09T08:39:29.862+05:30  INFO 21464 --- [civicdesk] [           main] com.civicdesk.CivicDeskApplication       : Started CivicDeskApplication in 10.301 seconds (process running for 10.811)
+Hibernate: select count(*) from departments d1_0
+Hibernate: select d1_0.departmentId,d1_0.departmentName,d1_0.email from departments d1_0 where d1_0.departmentId=?
+Hibernate: select d1_0.departmentId,d1_0.departmentName,d1_0.email from departments d1_0 where d1_0.departmentId=?
+Hibernate: insert into departments (departmentName,email,departmentId) values (?,?,?)
+Hibernate: insert into departments (departmentName,email,departmentId) values (?,?,?)
+Hibernate: select count(*) from users u1_0
+Hibernate: select u1_0.userId,u1_0.departmentId,u1_0.email,u1_0.name,u1_0.phone,u1_0.role,u1_0.status from users u1_0 where u1_0.userId=?
+Hibernate: select u1_0.userId,u1_0.departmentId,u1_0.email,u1_0.name,u1_0.phone,u1_0.role,u1_0.status from users u1_0 where u1_0.userId=?
+Hibernate: select u1_0.userId,u1_0.departmentId,u1_0.email,u1_0.name,u1_0.phone,u1_0.role,u1_0.status from users u1_0 where u1_0.userId=?
+Hibernate: select u1_0.userId,u1_0.departmentId,u1_0.email,u1_0.name,u1_0.phone,u1_0.role,u1_0.status from users u1_0 where u1_0.userId=?
+Hibernate: select u1_0.userId,u1_0.departmentId,u1_0.email,u1_0.name,u1_0.phone,u1_0.role,u1_0.status from users u1_0 where u1_0.userId=?
+Hibernate: insert into users (departmentId,email,name,phone,role,status,userId) values (?,?,?,?,?,?,?)
+Hibernate: insert into users (departmentId,email,name,phone,role,status,userId) values (?,?,?,?,?,?,?)
+Hibernate: insert into users (departmentId,email,name,phone,role,status,userId) values (?,?,?,?,?,?,?)
+Hibernate: insert into users (departmentId,email,name,phone,role,status,userId) values (?,?,?,?,?,?,?)
+Hibernate: insert into users (departmentId,email,name,phone,role,status,userId) values (?,?,?,?,?,?,?)
+Hibernate: select count(*) from citizen_profile cp1_0
+Hibernate: select cp1_0.citizenId,cp1_0.address,cp1_0.nationalId,cp1_0.userId,cp1_0.ward,cp1_0.zone from citizen_profile cp1_0 where cp1_0.citizenId=?
+Hibernate: select cp1_0.citizenId,cp1_0.address,cp1_0.nationalId,cp1_0.userId,cp1_0.ward,cp1_0.zone from citizen_profile cp1_0 where cp1_0.citizenId=?
+Hibernate: insert into citizen_profile (address,nationalId,userId,ward,zone,citizenId) values (?,?,?,?,?,?)
+Hibernate: insert into citizen_profile (address,nationalId,userId,ward,zone,citizenId) values (?,?,?,?,?,?)
+Hibernate: select count(*) from service_catalog sc1_0
+Hibernate: select d1_0.departmentId,d1_0.departmentName,d1_0.email from departments d1_0 where d1_0.departmentId=?
+Hibernate: select d1_0.departmentId,d1_0.departmentName,d1_0.email from departments d1_0 where d1_0.departmentId=?
+Hibernate: select sc1_0.serviceId,sc1_0.category,sc1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,sc1_0.fee,sc1_0.processingDays,sc1_0.requiredDocuments,sc1_0.serviceName,sc1_0.status from service_catalog sc1_0 join departments d1_0 on d1_0.departmentId=sc1_0.departmentId where sc1_0.serviceId=?
+Hibernate: select d1_0.departmentId,d1_0.departmentName,d1_0.email from departments d1_0 where d1_0.departmentId=?
+Hibernate: select sc1_0.serviceId,sc1_0.category,sc1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,sc1_0.fee,sc1_0.processingDays,sc1_0.requiredDocuments,sc1_0.serviceName,sc1_0.status from service_catalog sc1_0 join departments d1_0 on d1_0.departmentId=sc1_0.departmentId where sc1_0.serviceId=?
+Hibernate: select sc1_0.serviceId,sc1_0.category,sc1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,sc1_0.fee,sc1_0.processingDays,sc1_0.requiredDocuments,sc1_0.serviceName,sc1_0.status from service_catalog sc1_0 join departments d1_0 on d1_0.departmentId=sc1_0.departmentId where sc1_0.serviceId=?
+Hibernate: select d1_0.departmentId,d1_0.departmentName,d1_0.email from departments d1_0 where d1_0.departmentId=?
+Hibernate: insert into service_catalog (category,departmentId,fee,processingDays,requiredDocuments,serviceName,status,serviceId) values (?,?,?,?,?,?,?,?)
+Hibernate: insert into service_catalog (category,departmentId,fee,processingDays,requiredDocuments,serviceName,status,serviceId) values (?,?,?,?,?,?,?,?)
+Hibernate: insert into service_catalog (category,departmentId,fee,processingDays,requiredDocuments,serviceName,status,serviceId) values (?,?,?,?,?,?,?,?)
+2026-06-09T08:39:47.431+05:30  INFO 21464 --- [civicdesk] [nio-8082-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-09T08:39:47.432+05:30  INFO 21464 --- [civicdesk] [nio-8082-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-06-09T08:39:47.434+05:30  INFO 21464 --- [civicdesk] [nio-8082-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+Hibernate: select sc1_0.serviceId,sc1_0.category,sc1_0.departmentId,sc1_0.fee,sc1_0.processingDays,sc1_0.requiredDocuments,sc1_0.serviceName,sc1_0.status from service_catalog sc1_0 where sc1_0.status=?
+Hibernate: select d1_0.departmentId,d1_0.departmentName,d1_0.email from departments d1_0 where d1_0.departmentId=?
+Hibernate: select sc1_0.serviceId,sc1_0.category,sc1_0.departmentId,sc1_0.fee,sc1_0.processingDays,sc1_0.requiredDocuments,sc1_0.serviceName,sc1_0.status from service_catalog sc1_0 where sc1_0.status=? and sc1_0.category=?
+Hibernate: select sc1_0.serviceId,sc1_0.category,sc1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,sc1_0.fee,sc1_0.processingDays,sc1_0.requiredDocuments,sc1_0.serviceName,sc1_0.status from service_catalog sc1_0 join departments d1_0 on d1_0.departmentId=sc1_0.departmentId where sc1_0.serviceId=?
+Hibernate: select sc1_0.serviceId,sc1_0.category,sc1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,sc1_0.fee,sc1_0.processingDays,sc1_0.requiredDocuments,sc1_0.serviceName,sc1_0.status from service_catalog sc1_0 join departments d1_0 on d1_0.departmentId=sc1_0.departmentId where sc1_0.serviceId=?
+Hibernate: select sc1_0.serviceId,sc1_0.category,sc1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,sc1_0.fee,sc1_0.processingDays,sc1_0.requiredDocuments,sc1_0.serviceName,sc1_0.status from service_catalog sc1_0 join departments d1_0 on d1_0.departmentId=sc1_0.departmentId where sc1_0.serviceId=?
+Hibernate: update service_catalog set category=?,departmentId=?,fee=?,processingDays=?,requiredDocuments=?,serviceName=?,status=? where serviceId=?
+Hibernate: select sc1_0.serviceId,sc1_0.category,sc1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,sc1_0.fee,sc1_0.processingDays,sc1_0.requiredDocuments,sc1_0.serviceName,sc1_0.status from service_catalog sc1_0 join departments d1_0 on d1_0.departmentId=sc1_0.departmentId where sc1_0.serviceId=?
+Hibernate: select cp1_0.citizenId,cp1_0.address,cp1_0.nationalId,cp1_0.userId,cp1_0.ward,cp1_0.zone from citizen_profile cp1_0 where cp1_0.citizenId=?
+Hibernate: select u1_0.userId,u1_0.departmentId,u1_0.email,u1_0.name,u1_0.phone,u1_0.role,u1_0.status from users u1_0 where u1_0.userId=?
+Hibernate: select sc1_0.serviceId,sc1_0.category,sc1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,sc1_0.fee,sc1_0.processingDays,sc1_0.requiredDocuments,sc1_0.serviceName,sc1_0.status from service_catalog sc1_0 join departments d1_0 on d1_0.departmentId=sc1_0.departmentId where sc1_0.serviceId=?
+Hibernate: select u1_0.userId,u1_0.departmentId,u1_0.email,u1_0.name,u1_0.phone,u1_0.role,u1_0.status from users u1_0 where u1_0.role=? and u1_0.status=? and u1_0.departmentId=?
+Hibernate: select count(sr1_0.requestId) from service_request sr1_0 where sr1_0.assignedOfficerId=? and sr1_0.status not in (?,?)
+Hibernate: select count(sr1_0.requestId) from service_request sr1_0 where sr1_0.assignedOfficerId=? and sr1_0.status not in (?,?)
+Hibernate: select sr1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,sr1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,sr1_0.status,sr1_0.submissionDate from service_request sr1_0 left join users ao1_0 on ao1_0.userId=sr1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=sr1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=sr1_0.serviceId join departments d1_0 on d1_0.departmentId=s1_0.departmentId where sr1_0.requestId=?
+Hibernate: insert into service_request (assignedOfficerId,citizenId,expectedCompletionDate,fee,serviceId,status,submissionDate,requestId) values (?,?,?,?,?,?,?,?)
+Hibernate: select sr1_0.requestId,sr1_0.assignedOfficerId,sr1_0.citizenId,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,sr1_0.status,sr1_0.submissionDate from service_request sr1_0
+Hibernate: select u1_0.userId,u1_0.departmentId,u1_0.email,u1_0.name,u1_0.phone,u1_0.role,u1_0.status from users u1_0 where u1_0.userId=?
+Hibernate: select cp1_0.citizenId,cp1_0.address,cp1_0.nationalId,cp1_0.userId,cp1_0.ward,cp1_0.zone from citizen_profile cp1_0 where cp1_0.citizenId=?
+Hibernate: select sc1_0.serviceId,sc1_0.category,sc1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,sc1_0.fee,sc1_0.processingDays,sc1_0.requiredDocuments,sc1_0.serviceName,sc1_0.status from service_catalog sc1_0 join departments d1_0 on d1_0.departmentId=sc1_0.departmentId where sc1_0.serviceId=?
+Hibernate: select sr1_0.requestId,sr1_0.assignedOfficerId,sr1_0.citizenId,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,sr1_0.status,sr1_0.submissionDate from service_request sr1_0 join service_catalog s1_0 on s1_0.serviceId=sr1_0.serviceId join departments d1_0 on d1_0.departmentId=s1_0.departmentId where d1_0.departmentId=?
+Hibernate: select u1_0.userId,u1_0.departmentId,u1_0.email,u1_0.name,u1_0.phone,u1_0.role,u1_0.status from users u1_0 where u1_0.userId=?
+Hibernate: select cp1_0.citizenId,cp1_0.address,cp1_0.nationalId,cp1_0.userId,cp1_0.ward,cp1_0.zone from citizen_profile cp1_0 where cp1_0.citizenId=?
+Hibernate: select sc1_0.serviceId,sc1_0.category,sc1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,sc1_0.fee,sc1_0.processingDays,sc1_0.requiredDocuments,sc1_0.serviceName,sc1_0.status from service_catalog sc1_0 join departments d1_0 on d1_0.departmentId=sc1_0.departmentId where sc1_0.serviceId=?
+Hibernate: select sr1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,sr1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,sr1_0.status,sr1_0.submissionDate from service_request sr1_0 left join users ao1_0 on ao1_0.userId=sr1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=sr1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=sr1_0.serviceId join departments d1_0 on d1_0.departmentId=s1_0.departmentId where sr1_0.requestId=?
+Hibernate: select rd1_0.docId,rd1_0.documentType,rd1_0.filePath,rd1_0.requestId,rd1_0.uploadedDate,rd1_0.verificationStatus from request_document rd1_0 join service_request r1_0 on r1_0.requestId=rd1_0.requestId where r1_0.requestId=?
+Hibernate: select sr1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,sr1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,sr1_0.status,sr1_0.submissionDate from service_request sr1_0 left join users ao1_0 on ao1_0.userId=sr1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=sr1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=sr1_0.serviceId join departments d1_0 on d1_0.departmentId=s1_0.departmentId where sr1_0.requestId=?
+Hibernate: select sr1_0.requestId,sr1_0.assignedOfficerId,sr1_0.citizenId,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,sr1_0.status,sr1_0.submissionDate from service_request sr1_0 join citizen_profile c1_0 on c1_0.citizenId=sr1_0.citizenId where c1_0.citizenId=?
+Hibernate: select u1_0.userId,u1_0.departmentId,u1_0.email,u1_0.name,u1_0.phone,u1_0.role,u1_0.status from users u1_0 where u1_0.userId=?
+Hibernate: select cp1_0.citizenId,cp1_0.address,cp1_0.nationalId,cp1_0.userId,cp1_0.ward,cp1_0.zone from citizen_profile cp1_0 where cp1_0.citizenId=?
+Hibernate: select sc1_0.serviceId,sc1_0.category,sc1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,sc1_0.fee,sc1_0.processingDays,sc1_0.requiredDocuments,sc1_0.serviceName,sc1_0.status from service_catalog sc1_0 join departments d1_0 on d1_0.departmentId=sc1_0.departmentId where sc1_0.serviceId=?
+Hibernate: select sr1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,sr1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,sr1_0.status,sr1_0.submissionDate from service_request sr1_0 left join users ao1_0 on ao1_0.userId=sr1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=sr1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=sr1_0.serviceId join departments d1_0 on d1_0.departmentId=s1_0.departmentId where sr1_0.requestId=?
+Hibernate: select sr1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,sr1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,sr1_0.status,sr1_0.submissionDate from service_request sr1_0 left join users ao1_0 on ao1_0.userId=sr1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=sr1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=sr1_0.serviceId join departments d1_0 on d1_0.departmentId=s1_0.departmentId where sr1_0.requestId=?
+Hibernate: update service_request set assignedOfficerId=?,citizenId=?,expectedCompletionDate=?,fee=?,serviceId=?,status=?,submissionDate=? where requestId=?
+Hibernate: select sr1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,sr1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,sr1_0.status,sr1_0.submissionDate from service_request sr1_0 left join users ao1_0 on ao1_0.userId=sr1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=sr1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=sr1_0.serviceId join departments d1_0 on d1_0.departmentId=s1_0.departmentId where sr1_0.requestId=?
+Hibernate: update service_request set assignedOfficerId=?,citizenId=?,expectedCompletionDate=?,fee=?,serviceId=?,status=?,submissionDate=? where requestId=?
+Hibernate: select sr1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,sr1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,sr1_0.status,sr1_0.submissionDate from service_request sr1_0 left join users ao1_0 on ao1_0.userId=sr1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=sr1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=sr1_0.serviceId join departments d1_0 on d1_0.departmentId=s1_0.departmentId where sr1_0.requestId=?
+Hibernate: update service_request set assignedOfficerId=?,citizenId=?,expectedCompletionDate=?,fee=?,serviceId=?,status=?,submissionDate=? where requestId=?
+Hibernate: select sr1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,sr1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,sr1_0.status,sr1_0.submissionDate from service_request sr1_0 left join users ao1_0 on ao1_0.userId=sr1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=sr1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=sr1_0.serviceId join departments d1_0 on d1_0.departmentId=s1_0.departmentId where sr1_0.requestId=?
+Hibernate: select sr1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,sr1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,sr1_0.status,sr1_0.submissionDate from service_request sr1_0 left join users ao1_0 on ao1_0.userId=sr1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=sr1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=sr1_0.serviceId join departments d1_0 on d1_0.departmentId=s1_0.departmentId where sr1_0.requestId=?
+Hibernate: select cp1_0.citizenId,cp1_0.address,cp1_0.nationalId,cp1_0.userId,cp1_0.ward,cp1_0.zone from citizen_profile cp1_0 where cp1_0.citizenId=?
+Hibernate: select u1_0.userId,u1_0.departmentId,u1_0.email,u1_0.name,u1_0.phone,u1_0.role,u1_0.status from users u1_0 where u1_0.userId=?
+Hibernate: select sc1_0.serviceId,sc1_0.category,sc1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,sc1_0.fee,sc1_0.processingDays,sc1_0.requiredDocuments,sc1_0.serviceName,sc1_0.status from service_catalog sc1_0 join departments d1_0 on d1_0.departmentId=sc1_0.departmentId where sc1_0.serviceId=?
+Hibernate: select u1_0.userId,u1_0.departmentId,u1_0.email,u1_0.name,u1_0.phone,u1_0.role,u1_0.status from users u1_0 where u1_0.role=? and u1_0.status=? and u1_0.departmentId=?
+Hibernate: select count(sr1_0.requestId) from service_request sr1_0 where sr1_0.assignedOfficerId=? and sr1_0.status not in (?,?)
+Hibernate: select count(sr1_0.requestId) from service_request sr1_0 where sr1_0.assignedOfficerId=? and sr1_0.status not in (?,?)
+Hibernate: select sr1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,sr1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,sr1_0.status,sr1_0.submissionDate from service_request sr1_0 left join users ao1_0 on ao1_0.userId=sr1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=sr1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=sr1_0.serviceId join departments d1_0 on d1_0.departmentId=s1_0.departmentId where sr1_0.requestId=?
+Hibernate: insert into service_request (assignedOfficerId,citizenId,expectedCompletionDate,fee,serviceId,status,submissionDate,requestId) values (?,?,?,?,?,?,?,?)
+Hibernate: select sr1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,sr1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,sr1_0.status,sr1_0.submissionDate from service_request sr1_0 left join users ao1_0 on ao1_0.userId=sr1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=sr1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=sr1_0.serviceId join departments d1_0 on d1_0.departmentId=s1_0.departmentId where sr1_0.requestId=?
+Hibernate: select rd1_0.docId,rd1_0.documentType,rd1_0.filePath,rd1_0.requestId,r1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,r1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,r1_0.expectedCompletionDate,r1_0.fee,r1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,r1_0.status,r1_0.submissionDate,rd1_0.uploadedDate,rd1_0.verificationStatus from request_document rd1_0 join service_request r1_0 on r1_0.requestId=rd1_0.requestId left join users ao1_0 on ao1_0.userId=r1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=r1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=r1_0.serviceId where rd1_0.docId=?
+Hibernate: insert into request_document (documentType,filePath,requestId,uploadedDate,verificationStatus,docId) values (?,?,?,?,?,?)
+Hibernate: select sr1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,sr1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,sr1_0.status,sr1_0.submissionDate from service_request sr1_0 left join users ao1_0 on ao1_0.userId=sr1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=sr1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=sr1_0.serviceId join departments d1_0 on d1_0.departmentId=s1_0.departmentId where sr1_0.requestId=?
+Hibernate: select rd1_0.docId,rd1_0.documentType,rd1_0.filePath,rd1_0.requestId,r1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,r1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,r1_0.expectedCompletionDate,r1_0.fee,r1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,r1_0.status,r1_0.submissionDate,rd1_0.uploadedDate,rd1_0.verificationStatus from request_document rd1_0 join service_request r1_0 on r1_0.requestId=rd1_0.requestId left join users ao1_0 on ao1_0.userId=r1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=r1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=r1_0.serviceId where rd1_0.docId=?
+Hibernate: insert into request_document (documentType,filePath,requestId,uploadedDate,verificationStatus,docId) values (?,?,?,?,?,?)
+Hibernate: select count(*) from service_request sr1_0 where sr1_0.requestId=?
+Hibernate: select rd1_0.docId,rd1_0.documentType,rd1_0.filePath,rd1_0.requestId,rd1_0.uploadedDate,rd1_0.verificationStatus from request_document rd1_0 join service_request r1_0 on r1_0.requestId=rd1_0.requestId where r1_0.requestId=?
+Hibernate: select sr1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,sr1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,sr1_0.expectedCompletionDate,sr1_0.fee,sr1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,d1_0.departmentId,d1_0.departmentName,d1_0.email,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,sr1_0.status,sr1_0.submissionDate from service_request sr1_0 left join users ao1_0 on ao1_0.userId=sr1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=sr1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=sr1_0.serviceId join departments d1_0 on d1_0.departmentId=s1_0.departmentId where sr1_0.requestId=?
+Hibernate: select count(*) from service_request sr1_0 where sr1_0.requestId=?
+Hibernate: select rd1_0.docId,rd1_0.documentType,rd1_0.filePath,rd1_0.requestId,r1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,r1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,r1_0.expectedCompletionDate,r1_0.fee,r1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,r1_0.status,r1_0.submissionDate,rd1_0.uploadedDate,rd1_0.verificationStatus from request_document rd1_0 join service_request r1_0 on r1_0.requestId=rd1_0.requestId left join users ao1_0 on ao1_0.userId=r1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=r1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=r1_0.serviceId where rd1_0.docId=?
+Hibernate: select d1_0.departmentId,d1_0.departmentName,d1_0.email from departments d1_0 where d1_0.departmentId=?
+Hibernate: update request_document set documentType=?,filePath=?,requestId=?,uploadedDate=?,verificationStatus=? where docId=?
+Hibernate: select rd1_0.docId,rd1_0.documentType,rd1_0.filePath,rd1_0.requestId,r1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,r1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,r1_0.expectedCompletionDate,r1_0.fee,r1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,r1_0.status,r1_0.submissionDate,rd1_0.uploadedDate,rd1_0.verificationStatus from request_document rd1_0 join service_request r1_0 on r1_0.requestId=rd1_0.requestId left join users ao1_0 on ao1_0.userId=r1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=r1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=r1_0.serviceId where rd1_0.docId=?
+Hibernate: select rd1_0.docId,rd1_0.documentType,rd1_0.filePath,rd1_0.requestId,r1_0.requestId,ao1_0.userId,ao1_0.departmentId,ao1_0.email,ao1_0.name,ao1_0.phone,ao1_0.role,ao1_0.status,r1_0.citizenId,c1_0.citizenId,c1_0.address,c1_0.nationalId,c1_0.userId,c1_0.ward,c1_0.zone,r1_0.expectedCompletionDate,r1_0.fee,r1_0.serviceId,s1_0.serviceId,s1_0.category,s1_0.departmentId,s1_0.fee,s1_0.processingDays,s1_0.requiredDocuments,s1_0.serviceName,s1_0.status,r1_0.status,r1_0.submissionDate,rd1_0.uploadedDate,rd1_0.verificationStatus from request_document rd1_0 join service_request r1_0 on r1_0.requestId=rd1_0.requestId left join users ao1_0 on ao1_0.userId=r1_0.assignedOfficerId join citizen_profile c1_0 on c1_0.citizenId=r1_0.citizenId join service_catalog s1_0 on s1_0.serviceId=r1_0.serviceId where rd1_0.docId=?
+Hibernate: select d1_0.departmentId,d1_0.departmentName,d1_0.email from departments d1_0 where d1_0.departmentId=?
+Hibernate: update service_request set assignedOfficerId=?,citizenId=?,expectedCompletionDate=?,fee=?,serviceId=?,status=?,submissionDate=? where requestId=?
+Hibernate: update request_document set documentType=?,filePath=?,requestId=?,uploadedDate=?,verificationStatus=? where docId=?
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  02:35 min
+[INFO] Finished at: 2026-06-09T08:41:41+05:30
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.4.1:run (default-cli) on project civicdesk: Process terminated with exit code: -1 -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException

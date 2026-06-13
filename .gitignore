@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### CivicDesk runtime ###
+# Local document uploads (Service Request Management, Phase 1 filesystem storage)
+uploads/

@@ -1,0 +1,175 @@
+{
+  "info": {
+    "name": "CivicDesk - Service Request",
+    "description": "All Service Request module endpoints. Base URL + ids are collection variables (see the Variables tab). No auth needed yet (IAM not wired). Suggested order: 1) Catalog GETs  2) submitRequest  3) getAllRequests (copy a requestId into the requestId variable)  4) request GETs / updateRequestStatus  5) uploadDocument  6) getDocuments (copy a docId into the docId variable)  7) verifyDocument.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8082/civicDesk/serviceRequest" },
+    { "key": "serviceId", "value": "svc-0001" },
+    { "key": "citizenId", "value": "citizen-0001" },
+    { "key": "departmentId", "value": "dept-0004" },
+    { "key": "requestId", "value": "PASTE_FROM_getAllRequests" },
+    { "key": "docId", "value": "PASTE_FROM_getDocuments" }
+  ],
+  "item": [
+    {
+      "name": "Catalog services",
+      "item": [
+        {
+          "name": "getAllServices",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/getAllServices", "host": ["{{baseUrl}}"], "path": ["getAllServices"] },
+            "description": "Lists Active services. Add ?category=Certificate|Utility|Registration|Welfare to filter."
+          }
+        },
+        {
+          "name": "getAllServices (category filter)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/getAllServices?category=Certificate",
+              "host": ["{{baseUrl}}"], "path": ["getAllServices"],
+              "query": [{ "key": "category", "value": "Certificate" }]
+            }
+          }
+        },
+        {
+          "name": "getService",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/getService/{{serviceId}}", "host": ["{{baseUrl}}"], "path": ["getService", "{{serviceId}}"] }
+          }
+        },
+        {
+          "name": "createService",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceName\": \"Marriage Certificate\",\n  \"departmentId\": \"dept-0004\",\n  \"category\": \"Certificate\",\n  \"processingDays\": 5,\n  \"requiredDocuments\": [\"NationalID\", \"ResidenceProof\"],\n  \"fee\": 120.00\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/createService", "host": ["{{baseUrl}}"], "path": ["createService"] },
+            "description": "departmentId must exist (try dept-0004 or dept-0002). Returns 201. Re-running the same name returns 409."
+          }
+        },
+        {
+          "name": "updateService",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceName\": \"Drainage Connection\",\n  \"processingDays\": 12,\n  \"fee\": 800.00,\n  \"status\": \"Active\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/updateService/svc-0003", "host": ["{{baseUrl}}"], "path": ["updateService", "svc-0003"] },
+            "description": "status must be Active or Inactive; processingDays > 0 (else 400). 404 if the serviceId is unknown."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Service requests",
+      "item": [
+        {
+          "name": "submitRequest",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"citizenId\": \"citizen-0001\",\n  \"serviceId\": \"svc-0001\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/submitRequest", "host": ["{{baseUrl}}"], "path": ["submitRequest"] },
+            "description": "citizen-0001 = Active (201). citizen-0002 = Flagged (403). svc-0003 = Inactive (422). Response is a message only; get the requestId from getAllRequests."
+          }
+        },
+        {
+          "name": "getAllRequests",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/getAllRequests?status=&departmentId=",
+              "host": ["{{baseUrl}}"], "path": ["getAllRequests"],
+              "query": [
+                { "key": "status", "value": "", "description": "optional: Submitted|UnderReview|PendingDocuments|Approved|Rejected|Completed" },
+                { "key": "departmentId", "value": "", "description": "optional: e.g. dept-0004" }
+              ]
+            },
+            "description": "Copy a requestId from the response into the collection's requestId variable."
+          }
+        },
+        {
+          "name": "getRequest",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/getRequest/{{requestId}}", "host": ["{{baseUrl}}"], "path": ["getRequest", "{{requestId}}"] }
+          }
+        },
+        {
+          "name": "getRequestsByCitizen",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/getRequestsByCitizen/{{citizenId}}", "host": ["{{baseUrl}}"], "path": ["getRequestsByCitizen", "{{citizenId}}"] }
+          }
+        },
+        {
+          "name": "updateRequestStatus",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newStatus\": \"UnderReview\",\n  \"remarks\": \"All documents verified.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/updateRequestStatus/{{requestId}}", "host": ["{{baseUrl}}"], "path": ["updateRequestStatus", "{{requestId}}"] },
+            "description": "Workflow: Submitted->UnderReview->Approved->Completed (also ->PendingDocuments / ->Rejected). Invalid jumps and terminal requests return 422."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "uploadDocument",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "documentType", "value": "NationalID", "type": "text" },
+                { "key": "file", "type": "file", "src": [] }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/uploadDocument/{{requestId}}", "host": ["{{baseUrl}}"], "path": ["uploadDocument", "{{requestId}}"] },
+            "description": "Body = form-data. Set 'file' to a PDF/JPG/PNG (other types -> 400). Do NOT set Content-Type manually; Postman adds the multipart boundary. Request must not be terminal."
+          }
+        },
+        {
+          "name": "getDocuments",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/getDocuments/{{requestId}}", "host": ["{{baseUrl}}"], "path": ["getDocuments", "{{requestId}}"] },
+            "description": "Copy a docId from the response into the collection's docId variable."
+          }
+        },
+        {
+          "name": "verifyDocument",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"verificationStatus\": \"Verified\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/verifyDocument/{{docId}}", "host": ["{{baseUrl}}"], "path": ["verifyDocument", "{{docId}}"] },
+            "description": "verificationStatus must be Verified or Rejected (else 400). Rejected moves the parent request to PendingDocuments."
+          }
+        }
+      ]
+    }
+  ]
+}
