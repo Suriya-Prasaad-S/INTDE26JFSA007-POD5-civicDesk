@@ -1,7 +1,12 @@
 package com.civicdesk.module.grievance.entity;
 
+import com.civicdesk.module.grievance.enums.ActionStatus;
+import com.civicdesk.module.grievance.enums.ActionType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
@@ -26,23 +31,29 @@ public class GrievanceAction {
     @Column(length = 36, nullable = false)
     private String grievanceId;
 
-    @Column(length = 36, nullable = false)
+    /** Who created the action — resolved from the authenticated caller. */
+    @Column(length = 50, nullable = false)
     private String takenById;
+
+    /** Stored as a short code (enum name). */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 5, nullable = false)
+    private ActionType actionType;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime actionDate;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 150)
     private String grievanceActionTitle;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
+    /** The message (e.g. reason on reopen). Optional for some action types. */
+    @Column(columnDefinition = "TEXT")
     private String actionDescription;
 
-    @Column(length = 500)
-    private String grievanceProof;
-
-    @Column(length = 20, nullable = false)
-    private String status;
+    /** Only meaningful for WORK actions; null for system/workflow rows. */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 5)
+    private ActionStatus status;
 
     @PrePersist
     protected void onCreate() {

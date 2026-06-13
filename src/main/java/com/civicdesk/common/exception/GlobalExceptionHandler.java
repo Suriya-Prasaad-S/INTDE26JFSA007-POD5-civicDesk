@@ -12,11 +12,15 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
+import com.civicdesk.common.exception.grievance.ActionNotEditableException;
+import com.civicdesk.common.exception.grievance.ActionNotFoundException;
 import com.civicdesk.common.exception.grievance.GrievanceActionCreationException;
 import com.civicdesk.common.exception.grievance.GrievanceCreationException;
 import com.civicdesk.common.exception.grievance.GrievanceNotFoundException;
 import com.civicdesk.common.exception.grievance.InvalidGrievanceDataException;
+import com.civicdesk.common.exception.grievance.InvalidGrievanceStateException;
 import com.civicdesk.common.exception.grievance.InvalidUserRoleException;
+import com.civicdesk.common.exception.grievance.UnauthorizedGrievanceAccessException;
 import com.civicdesk.common.response.ApiResponse;
 import com.civicdesk.common.response.ErrorResponse;
 
@@ -49,6 +53,30 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGrievancePersistence(
             RuntimeException ex, WebRequest request) {
         return build(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(UnauthorizedGrievanceAccessException.class)
+    public ResponseEntity<ErrorResponse> handleUnauthorizedGrievanceAccess(
+            UnauthorizedGrievanceAccessException ex, WebRequest request) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidGrievanceStateException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidGrievanceState(
+            InvalidGrievanceStateException ex, WebRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(ActionNotEditableException.class)
+    public ResponseEntity<ErrorResponse> handleActionNotEditable(
+            ActionNotEditableException ex, WebRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(ActionNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleActionNotFound(
+            ActionNotFoundException ex, WebRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

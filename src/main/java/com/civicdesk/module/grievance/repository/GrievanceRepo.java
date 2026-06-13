@@ -15,4 +15,7 @@ public interface GrievanceRepo extends JpaRepository<Grievance, String> {
 
     /** Grievances assigned to a given user (e.g. a field officer). */
     List<Grievance> findByAssignedToId(String assignedToId);
+
+    /** Grievances belonging to a department (the supervisor's queue). */
+    List<Grievance> findByDepartmentId(String departmentId);
 }

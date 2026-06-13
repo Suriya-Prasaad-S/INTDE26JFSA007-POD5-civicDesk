@@ -2,17 +2,14 @@ package com.civicdesk.module.grievance.dto.response;
 
 import java.util.List;
 
-import com.civicdesk.module.grievance.entity.Grievance;
-import com.civicdesk.module.grievance.entity.GrievanceAction;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Detailed view of a single grievance together with all actions that have been
- * taken against it, ordered chronologically.
+ * A single grievance plus its full action timeline (oldest first).
+ * Entities are never exposed — only the response DTOs.
  */
 @Data
 @Builder
@@ -20,6 +17,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class GrievanceDetailResponse {
 
-    private Grievance grievance;
-    private List<GrievanceAction> actions;
+    private GrievanceResponse grievance;
+    private List<GrievanceActionResponse> actions;
 }

@@ -1,7 +1,13 @@
 package com.civicdesk.module.grievance.entity;
 
+import com.civicdesk.module.grievance.enums.Category;
+import com.civicdesk.module.grievance.enums.EscalationLevel;
+import com.civicdesk.module.grievance.enums.GrievanceStatus;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
@@ -25,17 +31,29 @@ public class Grievance {
     @Column(length = 36, nullable = false, updatable = false)
     private String grievanceId;
 
-    @Column(length = 36, nullable = false, updatable = false)
+    /** Owner — resolved from the authenticated caller, never the request body. */
+    @Column(length = 50, nullable = false, updatable = false)
     private String citizenId;
 
-    @Column(length = 36)
+    /** Owning department — resolved from {@link #category} at creation. */
+    @Column(length = 50)
+    private String departmentId;
+
+    /** Current holder (supervisor at intake, field officer once assigned). */
+    @Column(length = 50)
     private String assignedToId;
 
-    @Column(nullable = false)
+    /** Assigned field officer; null until assigned, retained through review. */
+    @Column(length = 50)
+    private String fieldOfficerId;
+
+    @Column(nullable = false, length = 150)
     private String grievanceTitle;
 
-    @Column(length = 30, nullable = false)
-    private String category;
+    /** Fixed list; locked after submission. Stored as a short code (enum name). */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 5, nullable = false, updatable = false)
+    private Category category;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String description;
@@ -46,11 +64,14 @@ public class Grievance {
     @Column(nullable = false, updatable = false)
     private LocalDateTime submissionDate;
 
+    /** Current handling tier; defaults to L1. */
+    @Enumerated(EnumType.STRING)
     @Column(length = 5, nullable = false)
-    private String escalationLevel = "L1";
+    private EscalationLevel escalationLevel = EscalationLevel.L2;
 
-    @Column(length = 20, nullable = false)
-    private String status = "Open";
+    @Enumerated(EnumType.STRING)
+    @Column(length = 5, nullable = false)
+    private GrievanceStatus status = GrievanceStatus.O;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
