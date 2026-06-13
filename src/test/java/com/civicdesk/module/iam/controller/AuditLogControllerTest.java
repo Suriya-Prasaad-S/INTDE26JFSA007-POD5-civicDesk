@@ -1,4 +1,4 @@
-﻿package com.civicdesk.module.iam.controller;
+package com.civicdesk.module.iam.controller;
 
 import com.civicdesk.common.response.PageResponse;
 import com.civicdesk.module.iam.security.JwtAuthFilter;

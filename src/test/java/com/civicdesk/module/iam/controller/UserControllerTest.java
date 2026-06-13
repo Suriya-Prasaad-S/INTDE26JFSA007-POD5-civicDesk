@@ -1,4 +1,4 @@
-﻿package com.civicdesk.module.iam.controller;
+package com.civicdesk.module.iam.controller;
 
 import com.civicdesk.module.iam.dto.request.CreateUserRequest;
 import com.civicdesk.module.iam.dto.response.UserResponse;

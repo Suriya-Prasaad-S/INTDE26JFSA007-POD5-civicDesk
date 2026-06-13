@@ -1,4 +1,4 @@
-﻿package com.civicdesk.module.iam.integration;
+package com.civicdesk.module.iam.integration;
 
 import com.civicdesk.module.iam.repository.DepartmentRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;

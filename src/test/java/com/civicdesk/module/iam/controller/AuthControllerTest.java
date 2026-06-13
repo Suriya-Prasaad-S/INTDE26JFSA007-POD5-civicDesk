@@ -1,4 +1,4 @@
-﻿package com.civicdesk.module.iam.controller;
+package com.civicdesk.module.iam.controller;
 
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
