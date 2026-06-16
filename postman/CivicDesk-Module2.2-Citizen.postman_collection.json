@@ -1,0 +1,254 @@
+{
+  "info": {
+    "name": "CivicDesk — Module 2.2 (Citizen Profile) v4",
+    "description": "All endpoints for the Citizen module, base path /civicDesk/citizenProfile (app port 8081).\n\nKey contract notes:\n- IDs are 16-char alphanumeric. Tables are snake_case (citizen_profile, citizen_document).\n- status is a single character: citizen A/V/F (Active/Verified/Flagged), document V/E/R (Valid/Expired/Revoked).\n- Register returns a message only (no id) — this collection fetches the new citizenId via getCitizensByWard, matching a unique name.\n- Upload stores the real file on disk; GET /files/{name} downloads it.\n- verifyDocument is gated to a DEPT_SUPERVISOR ({{verifierUserId}} = Asha Menon from mock data).\n- Error responses are {\"message\": \"...\"} only.\n\nPrereq: run with the local profile (mock users/departments + raised multipart limits):\n    .\\mvnw.cmd spring-boot:run \"-Dspring-boot.run.profiles=local\"",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081/civicDesk/citizenProfile" },
+    { "key": "citizenId", "value": "" },
+    { "key": "documentId", "value": "" },
+    { "key": "storedFileName", "value": "" },
+    { "key": "ward", "value": "Ward-12" },
+    { "key": "verifierUserId", "value": "20000000-0000-0000-0000-000000000002" },
+    { "key": "citizenName", "value": "" },
+    { "key": "citizenEmail", "value": "" },
+    { "key": "citizenNationalId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Citizen",
+      "item": [
+        {
+          "name": "1. Register Citizen (POST /registerCitizen)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Unique name/email/nationalId so the request is re-runnable AND we can find the new id by name.",
+                  "const stamp = Date.now();",
+                  "pm.collectionVariables.set('citizenName', 'Meera ' + stamp);",
+                  "pm.collectionVariables.set('citizenEmail', 'citizen_' + stamp + '@example.com');",
+                  "pm.collectionVariables.set('citizenNationalId', 'IND' + stamp);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.code === 201);",
+                  "pm.test('message is correct', () => pm.expect(pm.response.json().message).to.eql('Citizen registered successfully'));",
+                  "// Register returns no id; fetch it via the ward listing, matching our unique name.",
+                  "const name = pm.collectionVariables.get('citizenName');",
+                  "pm.sendRequest({ url: pm.collectionVariables.get('baseUrl') + '/getCitizensByWard/' + pm.collectionVariables.get('ward'), method: 'GET' }, (err, res) => {",
+                  "  if (!err && res.code === 200) {",
+                  "    const match = res.json().find(c => c.name === name);",
+                  "    pm.test('captured citizenId (16 chars) via ward lookup', () => {",
+                  "      pm.expect(match, 'citizen found by name').to.be.an('object');",
+                  "      pm.expect(match.citizenId).to.be.a('string').and.have.lengthOf(16);",
+                  "    });",
+                  "    if (match) { pm.collectionVariables.set('citizenId', match.citizenId); }",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": { "raw": "{{baseUrl}}/registerCitizen", "host": [ "{{baseUrl}}" ], "path": [ "registerCitizen" ] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{citizenName}}\",\n  \"dateOfBirth\": \"1990-05-14\",\n  \"gender\": \"Female\",\n  \"nationalIdNumber\": \"{{citizenNationalId}}\",\n  \"address\": \"42 MG Road\",\n  \"ward\": \"{{ward}}\",\n  \"zone\": \"North\",\n  \"email\": \"{{citizenEmail}}\",\n  \"phone\": \"9876543210\"\n}"
+            }
+          }
+        },
+        {
+          "name": "2. Get Profile (GET /getProfile/{citizenId})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.code === 200);",
+                  "const j = pm.response.json();",
+                  "pm.test('citizenId matches', () => pm.expect(j.citizenId).to.eql(pm.collectionVariables.get('citizenId')));",
+                  "pm.test('national ID is masked', () => pm.expect(j.nationalIdNumber === null || j.nationalIdNumber.indexOf('****') === 0).to.be.true);",
+                  "pm.test('status is a single-char citizen code', () => pm.expect(['A','V','F']).to.include(j.status));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/getProfile/{{citizenId}}", "host": [ "{{baseUrl}}" ], "path": [ "getProfile", "{{citizenId}}" ] }
+          }
+        },
+        {
+          "name": "3. Update Profile (PUT /updateProfile/{citizenId})",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('status is 200', () => pm.response.code === 200);",
+              "pm.test('message is correct', () => pm.expect(pm.response.json().message).to.eql('Citizen profile updated successfully'));"
+            ] } }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": { "raw": "{{baseUrl}}/updateProfile/{{citizenId}}", "host": [ "{{baseUrl}}" ], "path": [ "updateProfile", "{{citizenId}}" ] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Meera N. Nair\",\n  \"address\": \"55 Residency Road\",\n  \"phone\": \"9999988888\"\n}" }
+          }
+        },
+        {
+          "name": "4. Update Status (PUT /updateStatus/{citizenId})",
+          "description": "status is a single char: A=Active, V=Verified, F=Flagged. Allowed: A->V, A<->F, V->F. V->A is rejected (409).",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('status is 200', () => pm.response.code === 200);",
+              "pm.test('message is correct', () => pm.expect(pm.response.json().message).to.eql('Citizen status updated successfully'));"
+            ] } }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": { "raw": "{{baseUrl}}/updateStatus/{{citizenId}}", "host": [ "{{baseUrl}}" ], "path": [ "updateStatus", "{{citizenId}}" ] },
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"V\"\n}" }
+          }
+        },
+        {
+          "name": "10. Get Citizens By Ward (GET /getCitizensByWard/{ward})",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('status is 200', () => pm.response.code === 200);",
+              "const a = pm.response.json();",
+              "pm.test('response is an array', () => pm.expect(a).to.be.an('array'));",
+              "pm.test('summary items have the expected keys', () => { if (a.length) pm.expect(a[0]).to.have.all.keys('citizenId','name','ward','status'); });"
+            ] } }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/getCitizensByWard/{{ward}}", "host": [ "{{baseUrl}}" ], "path": [ "getCitizensByWard", "{{ward}}" ] }
+          }
+        },
+        {
+          "name": "Get All Citizens (GET /getAllCitizens) [optional]",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('status is 200', () => pm.response.code === 200);",
+              "pm.test('response is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ] } }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/getAllCitizens", "host": [ "{{baseUrl}}" ], "path": [ "getAllCitizens" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "5. Upload Document (POST /{citizenId}/uploadDocument, multipart)",
+          "description": "Attach a PDF/JPG/JPEG/PNG <= 2 MB in the 'file' form field before sending. The real file is stored on disk; rules (max 5 per citizen, 2 MB, allowed types) are enforced server-side.",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('status is 201', () => pm.response.code === 201);",
+              "const j = pm.response.json();",
+              "pm.test('message is correct', () => pm.expect(j.message).to.eql('Document uploaded successfully'));",
+              "pm.test('documentId is 16 chars', () => pm.expect(j.documentId).to.be.a('string').and.have.lengthOf(16));",
+              "if (j.documentId) { pm.collectionVariables.set('documentId', j.documentId); }"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/{{citizenId}}/uploadDocument", "host": [ "{{baseUrl}}" ], "path": [ "{{citizenId}}", "uploadDocument" ] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "documentType", "value": "NationalID", "type": "text" },
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Get All Documents (GET /{citizenId}/getAllDocuments)",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('status is 200', () => pm.response.code === 200);",
+              "const a = pm.response.json();",
+              "pm.test('response is an array', () => pm.expect(a).to.be.an('array'));",
+              "pm.test('summary hides filePath/verifiedBy', () => { if (a.length) { pm.expect(a[0]).to.not.have.property('filePath'); pm.expect(a[0]).to.not.have.property('verifiedBy'); } });"
+            ] } }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/{{citizenId}}/getAllDocuments", "host": [ "{{baseUrl}}" ], "path": [ "{{citizenId}}", "getAllDocuments" ] }
+          }
+        },
+        {
+          "name": "7. Get Document By Id (GET /{citizenId}/getDocumentById/{documentId})",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('status is 200', () => pm.response.code === 200);",
+              "const j = pm.response.json();",
+              "pm.test('documentId matches', () => pm.expect(j.documentId).to.eql(pm.collectionVariables.get('documentId')));",
+              "pm.test('detail includes filePath', () => pm.expect(j).to.have.property('filePath'));",
+              "pm.test('status is a single-char document code', () => pm.expect(['V','E','R']).to.include(j.status));",
+              "// capture the stored file name (last path segment of filePath) for the download request",
+              "if (j.filePath) { pm.collectionVariables.set('storedFileName', j.filePath.substring(j.filePath.lastIndexOf('/') + 1)); }"
+            ] } }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/{{citizenId}}/getDocumentById/{{documentId}}", "host": [ "{{baseUrl}}" ], "path": [ "{{citizenId}}", "getDocumentById", "{{documentId}}" ] }
+          }
+        },
+        {
+          "name": "Download File (GET /files/{name})",
+          "description": "Streams the stored document bytes. {{storedFileName}} is captured from the previous request's filePath.",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('status is 200', () => pm.response.code === 200);",
+              "pm.test('body has content', () => pm.expect(pm.response.responseSize).to.be.above(0));"
+            ] } }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/files/{{storedFileName}}", "host": [ "{{baseUrl}}" ], "path": [ "files", "{{storedFileName}}" ] }
+          }
+        },
+        {
+          "name": "8. Verify Document (PUT /{citizenId}/verifyDocument/{documentId})",
+          "description": "verifiedBy MUST be an Active DEPT_SUPERVISOR (else 403). {{verifierUserId}} = Asha Menon. status single char: V=Valid (confirm) or R=Revoked from V; E->R. E is never a manual target; R is terminal.",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('status is 200', () => pm.response.code === 200);",
+              "pm.test('message is correct', () => pm.expect(pm.response.json().message).to.eql('Document verified successfully'));"
+            ] } }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": { "raw": "{{baseUrl}}/{{citizenId}}/verifyDocument/{{documentId}}", "host": [ "{{baseUrl}}" ], "path": [ "{{citizenId}}", "verifyDocument", "{{documentId}}" ] },
+            "body": { "mode": "raw", "raw": "{\n  \"verifiedBy\": \"{{verifierUserId}}\",\n  \"status\": \"V\"\n}" }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -26,6 +26,33 @@ role-based access control, user administration, and audit logging.
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev   # verbose SQL
 ```
 
+## Repository layout (monorepo)
+
+```
+civicdesk-main/
+├── pom.xml                     # shared build + dependencies (the common build file)
+├── mvnw, mvnw.cmd, .mvn/       # Maven wrapper
+├── Dockerfile, .gitignore
+└── src/
+    ├── main/
+    │   ├── java/com/civicdesk/
+    │   │   ├── config/                 # shared @Configuration (security, cors, openapi, …)
+    │   │   ├── common/                 # cross-module shared building blocks
+    │   │   │   ├── exception/          #   global handler + shared exception types
+    │   │   │   ├── response/           #   shared response envelopes
+    │   │   │   └── util/               #   shared utilities (jwt, security context, …)
+    │   │   └── module/                 # ONE folder per module — owners fill these in
+    │   │       ├── iam/                # Module 2.1 — Suriya
+    │   │       ├── citizen/            # Module 2.2 — Pruthiviraj
+    │   │       ├── servicerequest/     # Module 2.3 — Haresh
+    │   │       ├── permit/             # Module 2.4 — Amirtha
+    │   │       ├── grievance/          # Module 2.5 — Anand
+    │   │       └── analytics/          # Module 2.7 — Suriya
+    │   └── resources/
+    │       └── application.properties  # config template (placeholders, no secrets)
+    └── test/
+        └── java/com/civicdesk/module/<module>/{controller,service,repository,integration}/
+
 App starts on `http://localhost:8081/civicDesk` (context path `/civicDesk`).
 
 - **Swagger UI:** http://localhost:8081/civicDesk/swagger-ui.html (use *Authorize* to paste a JWT)
