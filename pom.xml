@@ -23,10 +23,18 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
+		<!--
+		  TEMPORARILY DISABLED for local Module 2.2 (citizen) Postman testing.
+		  With this starter on the classpath and no SecurityConfig yet (the shared config/
+		  is IAM-owned, Module 2.1, and still empty), Spring Security's default locks every
+		  endpoint behind 401, so the citizen endpoints can't be exercised in Postman.
+		  Re-enable this for Tier 3 (real JWT auth) once IAM lands. Do NOT merge this commented
+		  out — restore before integrating with the shared branch.
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
+		-->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
