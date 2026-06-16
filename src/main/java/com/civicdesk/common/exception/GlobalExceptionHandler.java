@@ -86,11 +86,19 @@ public class GlobalExceptionHandler {
                 .map(this::formatFieldError)
                 .toList();
 
+        // `message` joins all field errors so IAM-style callers reading $.message always
+        // find the relevant text — even when one field trips several validators (e.g. a
+        // blank phone fails both @NotBlank and @Pattern). The frontend uses the structured
+        // `details` list to show errors per field.
+        String message = details.isEmpty()
+                ? "Validation failed for the submitted request"
+                : String.join(", ", details);
+
         ErrorResponse body = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message("Validation failed for the submitted request")
+                .message(message)
                 .path(extractPath(request))
                 .details(details)
                 .build();
