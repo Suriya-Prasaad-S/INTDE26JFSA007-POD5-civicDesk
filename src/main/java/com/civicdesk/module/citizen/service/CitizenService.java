@@ -1,8 +1,9 @@
 package com.civicdesk.module.citizen.service;
 
-import com.civicdesk.module.citizen.dto.request.RegisterCitizenRequest;
+import com.civicdesk.common.util.SecurityContextUtil;
+import com.civicdesk.module.citizen.dto.request.CompleteCitizenProfileRequest;
 import com.civicdesk.module.citizen.dto.request.UpdateCitizenProfileRequest;
-import com.civicdesk.module.citizen.dto.request.UpdateCitizenStatusRequest;
+import com.civicdesk.module.citizen.dto.request.VerifyCitizenRequest;
 import com.civicdesk.module.citizen.dto.response.CitizenProfileResponse;
 import com.civicdesk.module.citizen.dto.response.CitizenSummaryResponse;
 import com.civicdesk.module.citizen.entity.CitizenProfile;
@@ -13,143 +14,168 @@ import com.civicdesk.module.citizen.exception.DuplicateResourceException;
 import com.civicdesk.module.citizen.exception.InvalidRequestException;
 import com.civicdesk.module.citizen.exception.ResourceNotFoundException;
 import com.civicdesk.module.citizen.repository.CitizenProfileRepository;
-import com.civicdesk.module.citizen.support.IdGenerator;
+import com.civicdesk.module.iam.entity.User;
+import com.civicdesk.module.iam.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * Business logic for the citizen profile lifecycle.
  *
- * <p>{@code citizenId} is a 16-character alphanumeric id ({@link IdGenerator}). {@code status} is
- * carried as the {@link CitizenStatus} enum and exposed on the API as its single-character code.
+ * <p>A {@link CitizenProfile} shares its primary key with the IAM {@code User} ({@code userId}).
+ * Identity fields (name/email/phone) are read from {@code User} via {@link UserRepository}; this
+ * service owns only the citizen-specific extras and the verification {@code status}.
+ *
+ * <p>Lifecycle: a stub profile (status {@link CitizenStatus#Active}) is auto-created on the
+ * citizen's first {@code GET /me}; an officer then verifies them ({@code Active -> Verified}); the
+ * verified citizen completes the extra-fields form.
  */
 @Service
 @Transactional(readOnly = true)
 public class CitizenService {
 
     private final CitizenProfileRepository citizenRepository;
+    private final UserRepository userRepository;
 
-    public CitizenService(CitizenProfileRepository citizenRepository) {
+    public CitizenService(CitizenProfileRepository citizenRepository, UserRepository userRepository) {
         this.citizenRepository = citizenRepository;
+        this.userRepository = userRepository;
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Citizen-facing (identity from the JWT)
+    // ---------------------------------------------------------------------------------------------
+
+    /**
+     * Returns the current citizen's profile, lazily creating a stub (status {@code Active}) on the
+     * first call so the citizen enters the pending-verification queue.
+     */
+    @Transactional
+    public CitizenProfileResponse getMyProfile() {
+        String userId = currentUserId();
+        CitizenProfile profile = citizenRepository.findById(userId)
+                .orElseGet(() -> createStub(userId));
+        return toProfileResponse(profile, userRepository.findById(userId).orElse(null));
     }
 
     /**
-     * Registers a new citizen: rejects a duplicate email / national ID (409), assigns a fresh
-     * 16-char {@code citizenId}, and sets the initial status to {@link CitizenStatus#Active}.
-     *
-     * @return the generated {@code citizenId} (not exposed on the API response, but useful internally)
+     * Completes the current citizen's profile (the extra fields). The citizen must already be
+     * {@link CitizenStatus#Verified} (409 otherwise) and the national id must be unique (409).
      */
     @Transactional
-    public String registerCitizen(RegisterCitizenRequest request) {
-        if (citizenRepository.existsByEmail(request.email())) {
-            throw new DuplicateResourceException("Email already registered: " + request.email());
+    public void completeProfile(CompleteCitizenProfileRequest request) {
+        String userId = currentUserId();
+        CitizenProfile profile = citizenRepository.findById(userId)
+                .orElseThrow(() -> new BusinessRuleException(
+                        "You must be verified before completing your profile"));
+
+        if (profile.getStatus() != CitizenStatus.Verified) {
+            throw new BusinessRuleException(
+                    "Profile can be completed only after verification (current status: "
+                            + profile.getStatus().getCode() + ")");
         }
-        String nationalId = request.nationalIdNumber();
-        if (nationalId != null && !nationalId.isBlank()
-                && citizenRepository.existsByNationalIdNumber(nationalId)) {
-            throw new DuplicateResourceException("National ID already registered: " + nationalId);
+        if (citizenRepository.existsByNationalIdNumber(request.nationalIdNumber())) {
+            throw new DuplicateResourceException(
+                    "National ID already registered: " + request.nationalIdNumber());
         }
 
-        CitizenProfile citizen = new CitizenProfile();
-        citizen.setCitizenId(IdGenerator.newId());
-        citizen.setName(request.name());
-        citizen.setDateOfBirth(request.dateOfBirth());
-        if (request.gender() != null && !request.gender().isBlank()) {
-            citizen.setGender(parseEnum(Gender.class, request.gender(), "gender"));
-        }
-        citizen.setNationalIdNumber(nationalId);
-        citizen.setAddress(request.address());
-        citizen.setWard(request.ward());
-        citizen.setZone(request.zone());
-        citizen.setEmail(request.email());
-        citizen.setPhone(request.phone());
-        citizen.setStatus(CitizenStatus.Active);
-
-        citizenRepository.save(citizen);
-        return citizen.getCitizenId();
+        profile.setDateOfBirth(request.dateOfBirth());
+        profile.setGender(parseGender(request.gender()));
+        profile.setNationalIdNumber(request.nationalIdNumber());
+        profile.setAddress(request.address());
+        profile.setWard(request.ward());
+        profile.setZone(request.zone());
+        citizenRepository.save(profile);
     }
 
-    /** Loads a citizen (404 if missing) and returns it with the national ID masked. */
-    public CitizenProfileResponse getProfile(String citizenId) {
-        CitizenProfile citizen = citizenRepository.findById(citizenId)
-                .orElseThrow(() -> new ResourceNotFoundException("Citizen not found: " + citizenId));
-        return toProfileResponse(citizen);
-    }
-
-    /**
-     * Patches the mutable fields of a profile. Only non-null fields are applied; a request with no
-     * updatable fields is rejected (400). Email, gender, date of birth and national ID are not
-     * updatable through this endpoint by design.
-     */
+    /** Updates the current citizen's mutable extra fields (address/ward/zone). */
     @Transactional
-    public void updateProfile(String citizenId, UpdateCitizenProfileRequest request) {
+    public void updateMyProfile(UpdateCitizenProfileRequest request) {
         if (isEmptyUpdate(request)) {
             throw new InvalidRequestException("No updatable fields provided");
         }
-        CitizenProfile citizen = citizenRepository.findById(citizenId)
-                .orElseThrow(() -> new ResourceNotFoundException("Citizen not found: " + citizenId));
+        String userId = currentUserId();
+        CitizenProfile profile = citizenRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Citizen profile not found"));
 
-        if (request.name() != null) {
-            citizen.setName(request.name());
+        if (profile.getStatus() != CitizenStatus.Verified) {
+            throw new BusinessRuleException(
+                    "Profile can be updated only after verification (current status: "
+                            + profile.getStatus().getCode() + ")");
         }
+
         if (request.address() != null) {
-            citizen.setAddress(request.address());
+            profile.setAddress(request.address());
         }
         if (request.ward() != null) {
-            citizen.setWard(request.ward());
+            profile.setWard(request.ward());
         }
         if (request.zone() != null) {
-            citizen.setZone(request.zone());
+            profile.setZone(request.zone());
         }
-        if (request.phone() != null) {
-            citizen.setPhone(request.phone());
-        }
-        citizenRepository.save(citizen);
+        citizenRepository.save(profile);
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Officer-facing
+    // ---------------------------------------------------------------------------------------------
+
+    /** Citizens awaiting verification (status {@code Active}). */
+    public List<CitizenSummaryResponse> getPendingVerifications() {
+        return toSummaries(citizenRepository.findByStatus(CitizenStatus.Active));
     }
 
     /**
-     * Moves a citizen to a new status (supplied as a single-character code), enforcing the allowed
-     * transitions: {@code A&rarr;V}, {@code A&harr;F}, {@code V&rarr;F}. {@code V&rarr;A} is not
-     * allowed. An unknown code is a 400; an illegal (but well-formed) transition is a 409.
+     * Verifies (or flags) a citizen. {@code status} must be {@code V} or {@code F}; the transition
+     * must be allowed (409 otherwise). Stamps the verifying officer and timestamp.
      */
     @Transactional
-    public void updateStatus(String citizenId, UpdateCitizenStatusRequest request) {
-        CitizenStatus target = parseStatus(request.status());
-        CitizenProfile citizen = citizenRepository.findById(citizenId)
-                .orElseThrow(() -> new ResourceNotFoundException("Citizen not found: " + citizenId));
+    public void verifyCitizen(String citizenUserId, VerifyCitizenRequest request) {
+        CitizenStatus target = parseVerifyTarget(request.status());
+        CitizenProfile profile = citizenRepository.findById(citizenUserId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Citizen profile not found: " + citizenUserId));
 
-        CitizenStatus current = citizen.getStatus();
-        if (!isAllowedTransition(current, target)) {
+        if (!isAllowedTransition(profile.getStatus(), target)) {
             throw new BusinessRuleException(
-                    "Illegal citizen status transition: " + current.getCode() + " -> " + target.getCode());
+                    "Illegal citizen status transition: " + profile.getStatus().getCode()
+                            + " -> " + target.getCode());
         }
-        citizen.setStatus(target);
-        citizenRepository.save(citizen);
+        profile.setStatus(target);
+        profile.setVerifiedBy(currentUserId());
+        profile.setVerifiedAt(LocalDateTime.now());
+        citizenRepository.save(profile);
     }
 
-    /** Returns a lightweight summary of every citizen in the given ward. */
+    /** Lightweight summary of every citizen in the given ward. */
     public List<CitizenSummaryResponse> getCitizensByWard(String ward) {
-        return citizenRepository.findByWard(ward).stream()
-                .map(CitizenService::toSummary)
-                .toList();
+        return toSummaries(citizenRepository.findByWard(ward));
     }
 
-    /** Returns a lightweight summary of every citizen (optional listing). */
+    /** Lightweight summary of every citizen. */
     public List<CitizenSummaryResponse> getAllCitizens() {
-        return citizenRepository.findAll().stream()
-                .map(CitizenService::toSummary)
-                .toList();
+        return toSummaries(citizenRepository.findAll());
     }
 
     // ---------------------------------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------------------------------
 
-    /** Allowed citizen status transitions; anything not listed here (incl. same-state) is rejected. */
+    private CitizenProfile createStub(String userId) {
+        CitizenProfile profile = new CitizenProfile();
+        profile.setUserId(userId);
+        profile.setStatus(CitizenStatus.Active);
+        profile.setCreatedBy(userId);
+        return citizenRepository.save(profile);
+    }
+
+    /** Allowed citizen status transitions (officer-driven). */
     private static boolean isAllowedTransition(CitizenStatus from, CitizenStatus to) {
         return switch (from) {
             case Active -> to == CitizenStatus.Verified || to == CitizenStatus.Flagged;
@@ -159,34 +185,46 @@ public class CitizenService {
     }
 
     private static boolean isEmptyUpdate(UpdateCitizenProfileRequest r) {
-        return r.name() == null && r.address() == null && r.ward() == null
-                && r.zone() == null && r.phone() == null;
+        return r.address() == null && r.ward() == null && r.zone() == null;
     }
 
-    private static CitizenSummaryResponse toSummary(CitizenProfile c) {
-        return new CitizenSummaryResponse(
-                c.getCitizenId(), c.getName(), c.getWard(), c.getStatus().getCode());
+    /** Builds summaries, sourcing each citizen's name from {@code User} in a single batch query. */
+    private List<CitizenSummaryResponse> toSummaries(List<CitizenProfile> profiles) {
+        List<String> ids = profiles.stream().map(CitizenProfile::getUserId).toList();
+        Map<String, User> users = userRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(User::getUserId, Function.identity()));
+        return profiles.stream()
+                .map(p -> new CitizenSummaryResponse(
+                        p.getUserId(),
+                        nameOf(users.get(p.getUserId())),
+                        p.getWard(),
+                        p.getStatus().getCode()))
+                .toList();
     }
 
-    private CitizenProfileResponse toProfileResponse(CitizenProfile c) {
+    private CitizenProfileResponse toProfileResponse(CitizenProfile p, User user) {
         return new CitizenProfileResponse(
-                c.getCitizenId(),
-                c.getName(),
-                c.getDateOfBirth(),
-                c.getGender() == null ? null : c.getGender().name(),
-                maskNationalId(c.getNationalIdNumber()),
-                c.getAddress(),
-                c.getWard(),
-                c.getZone(),
-                c.getEmail(),
-                c.getPhone(),
-                c.getStatus().getCode());
+                p.getUserId(),
+                nameOf(user),
+                user == null ? null : user.getEmail(),
+                user == null ? null : user.getPhone(),
+                p.getDateOfBirth(),
+                p.getGender() == null ? null : p.getGender().name(),
+                maskNationalId(p.getNationalIdNumber()),
+                p.getAddress(),
+                p.getWard(),
+                p.getZone(),
+                p.getStatus().getCode(),
+                p.getVerifiedBy(),
+                p.getVerifiedAt(),
+                p.getCreatedAt());
     }
 
-    /**
-     * Masks the national ID so the full value is never exposed: keeps only the last 4 characters,
-     * e.g. {@code IND1234567890 -> ****7890}. Returns {@code null} for a null/blank value.
-     */
+    private static String nameOf(User user) {
+        return user == null ? null : user.getName();
+    }
+
+    /** Keeps only the last 4 characters, e.g. {@code IND1234567890 -> ****7890}. */
     private static String maskNationalId(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
@@ -198,26 +236,38 @@ public class CitizenService {
         return "****" + trimmed.substring(trimmed.length() - 4);
     }
 
-    /** Parses a single-character status code, raising a precise 400 listing the allowed codes. */
-    private static CitizenStatus parseStatus(String value) {
-        try {
-            return CitizenStatus.fromCode(value);
-        } catch (IllegalArgumentException | NullPointerException e) {
-            throw new InvalidRequestException(
-                    "Invalid status: '" + value + "'. Allowed codes: " + CitizenStatus.allowedCodes());
+    /** Case-insensitive parse of the gender name (Male/Female/Other). */
+    private static Gender parseGender(String value) {
+        for (Gender g : Gender.values()) {
+            if (g.name().equalsIgnoreCase(value.trim())) {
+                return g;
+            }
         }
+        throw new InvalidRequestException(
+                "Invalid gender: '" + value + "'. Allowed values: Male, Female, Other");
     }
 
-    /** Parses a String into an enum constant, raising a precise 400 listing the allowed values. */
-    private static <E extends Enum<E>> E parseEnum(Class<E> type, String value, String field) {
+    /** Parses the verify target: must be {@code V} (Verified) or {@code F} (Flagged). */
+    private static CitizenStatus parseVerifyTarget(String value) {
+        CitizenStatus status;
         try {
-            return Enum.valueOf(type, value);
+            status = CitizenStatus.fromCode(value);
         } catch (IllegalArgumentException | NullPointerException e) {
-            String allowed = Arrays.stream(type.getEnumConstants())
-                    .map(Enum::name)
-                    .collect(Collectors.joining(", "));
             throw new InvalidRequestException(
-                    "Invalid " + field + ": '" + value + "'. Allowed values: " + allowed);
+                    "Invalid status: '" + value + "'. Allowed verify codes: V, F");
         }
+        if (status == CitizenStatus.Active) {
+            throw new InvalidRequestException(
+                    "'A' (Active) is not a valid verify target; use V (Verified) or F (Flagged)");
+        }
+        return status;
+    }
+
+    private static String currentUserId() {
+        String userId = SecurityContextUtil.getCurrentUserId();
+        if (userId == null) {
+            throw new InvalidRequestException("No authenticated user in the security context");
+        }
+        return userId;
     }
 }

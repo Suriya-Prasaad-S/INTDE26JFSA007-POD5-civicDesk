@@ -1,13 +1,14 @@
 package com.civicdesk.module.citizen.controller;
 
-import com.civicdesk.module.citizen.dto.request.RegisterCitizenRequest;
+import com.civicdesk.module.citizen.dto.request.CompleteCitizenProfileRequest;
 import com.civicdesk.module.citizen.dto.request.UpdateCitizenProfileRequest;
-import com.civicdesk.module.citizen.dto.request.UpdateCitizenStatusRequest;
+import com.civicdesk.module.citizen.dto.request.VerifyCitizenRequest;
 import com.civicdesk.module.citizen.dto.response.CitizenProfileResponse;
 import com.civicdesk.module.citizen.dto.response.CitizenSummaryResponse;
 import com.civicdesk.module.citizen.service.CitizenService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,12 +22,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Citizen profile endpoints under base path {@code /citizenProfile} (served below the
- * application context path {@code /civicDesk}).
+ * Citizen profile endpoints under base path {@code /citizenProfile} (served below the application
+ * context path {@code /civicDesk}). The caller is always identified by the JWT.
  *
- * <p>GET endpoints return the response DTO; POST/PUT return a {@code {"message": …}} acknowledgement.
- * Registration returns the message only (the generated id is fetched via the listing endpoints).
- * {@code status} values on the API are single-character codes (A/V/F).
+ * <p>Citizen-facing endpoints ({@code /me}) require role {@code CIT}; officer endpoints
+ * (pending list, verify) require {@code FO}/{@code DS}/{@code ADM}. POST/PUT return a
+ * {@code {"message": …}} acknowledgement; GET endpoints return the response DTO.
  */
 @RestController
 @RequestMapping("/citizenProfile")
@@ -38,46 +39,62 @@ public class CitizenController {
         this.citizenService = citizenService;
     }
 
-    /** #1 — POST /registerCitizen (public). Returns 201 with a message only. */
-    @PostMapping("/registerCitizen")
-    public ResponseEntity<Map<String, Object>> registerCitizen(
-            @Valid @RequestBody RegisterCitizenRequest request) {
-        citizenService.registerCitizen(request);
-        return ResponseEntity.status(201).body(message("Citizen registered successfully"));
+    // --- Citizen-facing (role CIT) ---
+
+    /** View own profile + verification state; creates a stub on first call. */
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('CIT')")
+    public ResponseEntity<CitizenProfileResponse> getMyProfile() {
+        return ResponseEntity.ok(citizenService.getMyProfile());
     }
 
-    /** #2 — GET /getProfile/{citizenId}. National ID is returned masked by the service. */
-    @GetMapping("/getProfile/{citizenId}")
-    public ResponseEntity<CitizenProfileResponse> getProfile(@PathVariable String citizenId) {
-        return ResponseEntity.ok(citizenService.getProfile(citizenId));
+    /** Complete own profile (extra fields) after being verified. */
+    @PostMapping("/me")
+    @PreAuthorize("hasRole('CIT')")
+    public ResponseEntity<Map<String, Object>> completeMyProfile(
+            @Valid @RequestBody CompleteCitizenProfileRequest request) {
+        citizenService.completeProfile(request);
+        return ResponseEntity.ok(message("Profile completed successfully"));
     }
 
-    /** #3 — PUT /updateProfile/{citizenId}. Patches the mutable fields only. */
-    @PutMapping("/updateProfile/{citizenId}")
-    public ResponseEntity<Map<String, Object>> updateProfile(
-            @PathVariable String citizenId,
+    /** Update own mutable extra fields (address/ward/zone). */
+    @PutMapping("/me")
+    @PreAuthorize("hasRole('CIT')")
+    public ResponseEntity<Map<String, Object>> updateMyProfile(
             @Valid @RequestBody UpdateCitizenProfileRequest request) {
-        citizenService.updateProfile(citizenId, request);
-        return ResponseEntity.ok(message("Citizen profile updated successfully"));
+        citizenService.updateMyProfile(request);
+        return ResponseEntity.ok(message("Profile updated successfully"));
     }
 
-    /** #4 — PUT /updateStatus/{citizenId}. Enforces the allowed status transitions (codes A/V/F). */
-    @PutMapping("/updateStatus/{citizenId}")
-    public ResponseEntity<Map<String, Object>> updateStatus(
-            @PathVariable String citizenId,
-            @Valid @RequestBody UpdateCitizenStatusRequest request) {
-        citizenService.updateStatus(citizenId, request);
-        return ResponseEntity.ok(message("Citizen status updated successfully"));
+    // --- Officer-facing (roles FO / DS / ADM) ---
+
+    /** Citizens awaiting verification (status Active). */
+    @GetMapping("/pendingVerifications")
+    @PreAuthorize("hasAnyRole('FO','DS','ADM')")
+    public ResponseEntity<List<CitizenSummaryResponse>> getPendingVerifications() {
+        return ResponseEntity.ok(citizenService.getPendingVerifications());
     }
 
-    /** #10 — GET /getCitizensByWard/{ward}. Returns an empty list when the ward has no citizens. */
+    /** Verify or flag a citizen (status V or F). */
+    @PutMapping("/{userId}/verify")
+    @PreAuthorize("hasAnyRole('FO','DS','ADM')")
+    public ResponseEntity<Map<String, Object>> verifyCitizen(
+            @PathVariable String userId,
+            @Valid @RequestBody VerifyCitizenRequest request) {
+        citizenService.verifyCitizen(userId, request);
+        return ResponseEntity.ok(message("Citizen verification updated successfully"));
+    }
+
+    /** Officer listing of citizens in a ward. */
     @GetMapping("/getCitizensByWard/{ward}")
+    @PreAuthorize("hasAnyRole('FO','DS','ADM')")
     public ResponseEntity<List<CitizenSummaryResponse>> getCitizensByWard(@PathVariable String ward) {
         return ResponseEntity.ok(citizenService.getCitizensByWard(ward));
     }
 
-    /** GET /getAllCitizens — optional listing of every citizen (summary view). */
+    /** Officer listing of every citizen. */
     @GetMapping("/getAllCitizens")
+    @PreAuthorize("hasAnyRole('FO','DS','ADM')")
     public ResponseEntity<List<CitizenSummaryResponse>> getAllCitizens() {
         return ResponseEntity.ok(citizenService.getAllCitizens());
     }

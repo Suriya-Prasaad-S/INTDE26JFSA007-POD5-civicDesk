@@ -13,6 +13,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -65,6 +66,7 @@ public class DocumentController {
      * enforced by the service (and the stored file is rolled back if the service rejects it).
      */
     @PostMapping(value = "/{citizenId}/uploadDocument", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('CIT')")
     public ResponseEntity<Map<String, Object>> uploadDocument(
             @PathVariable String citizenId,
             @RequestParam("documentType") String documentType,
@@ -99,12 +101,14 @@ public class DocumentController {
 
     /** #6 — GET /{citizenId}/getAllDocuments. 404 if the citizen does not exist. */
     @GetMapping("/{citizenId}/getAllDocuments")
+    @PreAuthorize("hasRole('CIT')")
     public ResponseEntity<List<DocumentSummaryResponse>> getAllDocuments(@PathVariable String citizenId) {
         return ResponseEntity.ok(documentService.getAllDocuments(citizenId));
     }
 
     /** #7 — GET /{citizenId}/getDocumentById/{documentId}. Scoped to the owning citizen. */
     @GetMapping("/{citizenId}/getDocumentById/{documentId}")
+    @PreAuthorize("hasRole('CIT')")
     public ResponseEntity<DocumentDetailResponse> getDocumentById(
             @PathVariable String citizenId,
             @PathVariable String documentId) {
@@ -116,6 +120,7 @@ public class DocumentController {
      * Active Department Supervisor (403 otherwise); applies the manual status transition.
      */
     @PutMapping("/{citizenId}/verifyDocument/{documentId}")
+    @PreAuthorize("hasAnyRole('FO','DS','ADM')")
     public ResponseEntity<Map<String, Object>> verifyDocument(
             @PathVariable String citizenId,
             @PathVariable String documentId,

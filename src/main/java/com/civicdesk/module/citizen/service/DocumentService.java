@@ -1,5 +1,6 @@
 package com.civicdesk.module.citizen.service;
 
+import com.civicdesk.common.util.SecurityContextUtil;
 import com.civicdesk.module.citizen.dto.request.VerifyDocumentRequest;
 import com.civicdesk.module.citizen.dto.response.DocumentDetailResponse;
 import com.civicdesk.module.citizen.dto.response.DocumentSummaryResponse;
@@ -13,8 +14,6 @@ import com.civicdesk.module.citizen.exception.ResourceNotFoundException;
 import com.civicdesk.module.citizen.repository.CitizenDocumentRepository;
 import com.civicdesk.module.citizen.repository.CitizenProfileRepository;
 import com.civicdesk.module.citizen.support.IdGenerator;
-import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,22 +21,21 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
  * Business logic for citizen documents.
  *
- * <p>The actual file bytes are written to disk by {@code FileStorageService} (the controller
- * produces the stored {@code filePath}); this service enforces the upload rules and persists the
- * record. {@code documentId} is a 16-character alphanumeric id; {@code status} is exposed on the API
- * as its single-character code.
+ * <p>{@code citizenId} on these operations is the citizen's {@code userId}. File bytes are written
+ * to disk by {@code FileStorageService} (the controller produces the stored {@code filePath});
+ * this service enforces the upload rules and persists the record. {@code documentId} is a
+ * 16-character alphanumeric id; {@code status} is exposed on the API as its single-character code.
  *
- * <p><b>Verification is gated to a Department Supervisor.</b> Until the JWT role check lands
- * (P1 integration step), {@link #verifyDocument} looks up the supplied {@code verifiedBy} in the
- * IAM {@code users} table and rejects (403) anyone who is not an Active supervisor. The role/status
- * values matched here are IAM's canonical codes: role {@code DS} and status {@code A}.
+ * <p>Role gating is handled by {@code @PreAuthorize} on the controller (citizen ops require
+ * {@code CIT}; verification requires {@code FO}/{@code DS}/{@code ADM}). Citizen ops additionally
+ * enforce that a {@code CIT} caller acts only on their own documents. The verifier's identity is
+ * taken from the JWT.
  */
 @Service
 @Transactional(readOnly = true)
@@ -55,21 +53,19 @@ public class DocumentService {
 
     private final CitizenDocumentRepository documentRepository;
     private final CitizenProfileRepository citizenRepository;
-    private final JdbcTemplate jdbcTemplate;
 
     public DocumentService(CitizenDocumentRepository documentRepository,
-                           CitizenProfileRepository citizenRepository,
-                           JdbcTemplate jdbcTemplate) {
+                           CitizenProfileRepository citizenRepository) {
         this.documentRepository = documentRepository;
         this.citizenRepository = citizenRepository;
-        this.jdbcTemplate = jdbcTemplate;
     }
 
     /**
-     * Records an uploaded document after enforcing the upload rules: the citizen must exist (404),
-     * the count must be under {@value #MAX_DOCUMENTS_PER_CITIZEN} (409), the size must be within
-     * 2 MB and the type must be PDF/JPG/JPEG/PNG by both extension and MIME (400). The new document
-     * starts {@link DocumentStatus#Valid}.
+     * Records an uploaded document after enforcing the upload rules: the caller must be the owning
+     * citizen (403), the citizen must exist (404), the count must be under
+     * {@value #MAX_DOCUMENTS_PER_CITIZEN} (409), the size must be within 2 MB and the type must be
+     * PDF/JPG/JPEG/PNG by both extension and MIME (400). The new document starts
+     * {@link DocumentStatus#Valid}.
      *
      * @param storedFilePath the retrieval path/URL of the already-stored file (from FileStorageService)
      * @return the generated {@code documentId}
@@ -77,6 +73,7 @@ public class DocumentService {
     @Transactional
     public String uploadDocument(String citizenId, String documentType, String originalFileName,
                                  String contentType, long sizeBytes, String storedFilePath) {
+        requireSelf(citizenId);
         requireCitizenExists(citizenId);
         DocumentType type = parseEnum(DocumentType.class, documentType, "documentType");
 
@@ -116,6 +113,7 @@ public class DocumentService {
 
     /** Lists every document for a citizen (404 if the citizen does not exist). */
     public List<DocumentSummaryResponse> getAllDocuments(String citizenId) {
+        requireSelf(citizenId);
         requireCitizenExists(citizenId);
         return documentRepository.findByCitizenId(citizenId).stream()
                 .map(DocumentService::toSummary)
@@ -124,6 +122,7 @@ public class DocumentService {
 
     /** Returns one document scoped to its owning citizen (404 if not found for that citizen). */
     public DocumentDetailResponse getDocumentById(String citizenId, String documentId) {
+        requireSelf(citizenId);
         CitizenDocument document = documentRepository
                 .findByDocumentIdAndCitizenId(documentId, citizenId)
                 .orElseThrow(() -> new ResourceNotFoundException("Document not found: " + documentId));
@@ -131,16 +130,14 @@ public class DocumentService {
     }
 
     /**
-     * Verifies a document. The verifier must be an Active {@code DEPT_SUPERVISOR} (403 otherwise).
-     * Records {@code verifiedBy}/{@code verifiedAt} and applies the target status (single-char code),
-     * enforcing the manual transitions: {@code V&rarr;V} (confirm), {@code V&rarr;R}, {@code E&rarr;R}.
-     * {@code E} is never a manual target; {@code R} is terminal. An expired-but-still-{@code V}
-     * document is treated as {@code E} for this check.
+     * Verifies a document. The caller (an officer, gated by {@code @PreAuthorize}) is recorded as
+     * {@code verifiedBy} from the JWT. Applies the target status (single-char code), enforcing the
+     * manual transitions: {@code V->V} (confirm), {@code V->R}, {@code E->R}. {@code E} is never a
+     * manual target; {@code R} is terminal. An expired-but-still-{@code V} document is treated as
+     * {@code E} for this check.
      */
     @Transactional
     public void verifyDocument(String citizenId, String documentId, VerifyDocumentRequest request) {
-        requireDepartmentSupervisor(request.verifiedBy());
-
         CitizenDocument document = documentRepository
                 .findByDocumentIdAndCitizenId(documentId, citizenId)
                 .orElseThrow(() -> new ResourceNotFoundException("Document not found: " + documentId));
@@ -152,7 +149,7 @@ public class DocumentService {
                     "Illegal document status transition: " + current.getCode() + " -> " + target.getCode());
         }
         document.setStatus(target);
-        document.setVerifiedBy(request.verifiedBy());
+        document.setVerifiedBy(currentUserId());
         document.setVerifiedAt(LocalDateTime.now());
         documentRepository.save(document);
     }
@@ -161,33 +158,14 @@ public class DocumentService {
     // Helpers
     // ---------------------------------------------------------------------------------------------
 
-    /**
-     * Stand-in for the Tier-3 JWT role check: the {@code verifiedBy} user must exist in the IAM
-     * {@code users} table as an Active Department Supervisor, else 403. Matches IAM's canonical
-     * codes — role {@code DS} ({@code Role.DS}) and status {@code A} ({@code UserStatus.ACT}).
-     */
-    private void requireDepartmentSupervisor(String userId) {
-        List<Map<String, Object>> rows;
-        try {
-            rows = jdbcTemplate.queryForList(
-                    "SELECT role, status FROM users WHERE userId = ?", userId);
-        } catch (DataAccessException e) {
-            throw new ForbiddenActionException(
-                    "Cannot verify the supervisor role (users reference data unavailable)");
-        }
-        if (rows.isEmpty()) {
-            throw new ForbiddenActionException("Unknown verifier: " + userId);
-        }
-        Map<String, Object> user = rows.get(0);
-        if (!"DS".equals(String.valueOf(user.get("role")))) {
-            throw new ForbiddenActionException("Only a Department Supervisor may verify documents");
-        }
-        if (!"A".equals(String.valueOf(user.get("status")))) {
-            throw new ForbiddenActionException("Verifier account is not active: " + userId);
+    /** A {@code CIT} caller may act only on their own documents (path id must equal the JWT id). */
+    private void requireSelf(String citizenId) {
+        if (!citizenId.equals(currentUserId())) {
+            throw new ForbiddenActionException("You can only access your own documents");
         }
     }
 
-    /** Manual (verify-time) document transitions. Auto-expiry ({@code V&rarr;E}) is excluded. */
+    /** Manual (verify-time) document transitions. Auto-expiry ({@code V->E}) is excluded. */
     private static boolean isAllowedTransition(DocumentStatus from, DocumentStatus to) {
         if (to == DocumentStatus.Expired) {
             return false; // reached automatically, never set by hand
@@ -279,5 +257,13 @@ public class DocumentService {
             throw new InvalidRequestException(
                     "Invalid " + field + ": '" + value + "'. Allowed values: " + allowed);
         }
+    }
+
+    private static String currentUserId() {
+        String userId = SecurityContextUtil.getCurrentUserId();
+        if (userId == null) {
+            throw new ForbiddenActionException("No authenticated user in the security context");
+        }
+        return userId;
     }
 }
