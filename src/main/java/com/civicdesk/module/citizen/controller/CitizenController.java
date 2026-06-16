@@ -21,14 +21,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Citizen profile endpoints under base path {@code /civicDesk/citizenProfile}.
+ * Citizen profile endpoints under base path {@code /citizenProfile} (served below the
+ * application context path {@code /civicDesk}).
  *
  * <p>GET endpoints return the response DTO; POST/PUT return a {@code {"message": …}} acknowledgement.
  * Registration returns the message only (the generated id is fetched via the listing endpoints).
  * {@code status} values on the API are single-character codes (A/V/F).
  */
 @RestController
-@RequestMapping("/civicDesk/citizenProfile")
+@RequestMapping("/citizenProfile")
 public class CitizenController {
 
     private final CitizenService citizenService;

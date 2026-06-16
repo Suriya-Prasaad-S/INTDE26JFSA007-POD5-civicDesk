@@ -30,7 +30,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Citizen document endpoints under base path {@code /civicDesk/citizenProfile}.
+ * Citizen document endpoints under base path {@code /citizenProfile} (served below the
+ * application context path {@code /civicDesk}).
  *
  * <p>{@code uploadDocument} accepts a real {@code multipart/form-data} file: the bytes are written to
  * disk by {@link FileStorageService} under a generated name, {@code filePath} is set to the
@@ -39,7 +40,7 @@ import java.util.Map;
  * (it belonged to Module 2.3).
  */
 @RestController
-@RequestMapping("/civicDesk/citizenProfile")
+@RequestMapping("/citizenProfile")
 public class DocumentController {
 
     private final DocumentService documentService;

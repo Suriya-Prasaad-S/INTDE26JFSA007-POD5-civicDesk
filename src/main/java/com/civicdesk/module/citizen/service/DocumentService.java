@@ -34,9 +34,10 @@ import java.util.stream.Collectors;
  * record. {@code documentId} is a 16-character alphanumeric id; {@code status} is exposed on the API
  * as its single-character code.
  *
- * <p><b>Verification is gated to a Department Supervisor.</b> Until Module 2.1 (IAM) provides JWT
- * role checks, {@link #verifyDocument} looks up the supplied {@code verifiedBy} in the {@code users}
- * table and rejects (403) anyone who is not an Active {@code DEPT_SUPERVISOR}.
+ * <p><b>Verification is gated to a Department Supervisor.</b> Until the JWT role check lands
+ * (P1 integration step), {@link #verifyDocument} looks up the supplied {@code verifiedBy} in the
+ * IAM {@code users} table and rejects (403) anyone who is not an Active supervisor. The role/status
+ * values matched here are IAM's canonical codes: role {@code DS} and status {@code A}.
  */
 @Service
 @Transactional(readOnly = true)
@@ -161,8 +162,9 @@ public class DocumentService {
     // ---------------------------------------------------------------------------------------------
 
     /**
-     * Stand-in for the Tier-3 JWT role check: the {@code verifiedBy} user must exist in the
-     * {@code users} table as an Active {@code DEPT_SUPERVISOR}, else 403.
+     * Stand-in for the Tier-3 JWT role check: the {@code verifiedBy} user must exist in the IAM
+     * {@code users} table as an Active Department Supervisor, else 403. Matches IAM's canonical
+     * codes — role {@code DS} ({@code Role.DS}) and status {@code A} ({@code UserStatus.ACT}).
      */
     private void requireDepartmentSupervisor(String userId) {
         List<Map<String, Object>> rows;
@@ -177,10 +179,10 @@ public class DocumentService {
             throw new ForbiddenActionException("Unknown verifier: " + userId);
         }
         Map<String, Object> user = rows.get(0);
-        if (!"DEPT_SUPERVISOR".equals(String.valueOf(user.get("role")))) {
+        if (!"DS".equals(String.valueOf(user.get("role")))) {
             throw new ForbiddenActionException("Only a Department Supervisor may verify documents");
         }
-        if (!"Active".equals(String.valueOf(user.get("status")))) {
+        if (!"A".equals(String.valueOf(user.get("status")))) {
             throw new ForbiddenActionException("Verifier account is not active: " + userId);
         }
     }
