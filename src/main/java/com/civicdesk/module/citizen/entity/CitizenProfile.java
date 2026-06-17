@@ -31,6 +31,9 @@ import java.time.LocalDateTime;
  * <em>nullable</em>: the row is created as a stub on the citizen's first visit and the extras
  * are filled in later via the "complete profile" form, after an officer has verified them.
  * {@code status} persists as a single-character code (A/V/F) via {@link CitizenStatusConverter}.
+ *
+ * <p>Convention: the table name is snake_case ({@code citizen_profile}) while column names are
+ * camelCase, matching IAM and grievance.
  */
 @Entity
 @Table(
@@ -42,10 +45,10 @@ public class CitizenProfile {
 
     /** Same value as {@code User.userId}; set from the JWT at stub creation. */
     @Id
-    @Column(name = "user_id", length = 36, nullable = false, updatable = false)
+    @Column(name = "userId", length = 36, nullable = false, updatable = false)
     private String userId;
 
-    @Column(name = "date_of_birth")
+    @Column(name = "dateOfBirth")
     private LocalDate dateOfBirth;
 
     @Enumerated(EnumType.STRING)
@@ -53,7 +56,7 @@ public class CitizenProfile {
     @Check(constraints = "gender in ('Male','Female','Other')")
     private Gender gender;
 
-    @Column(name = "national_id_number", unique = true, length = 50)
+    @Column(name = "nationalIdNumber", unique = true, length = 50)
     private String nationalIdNumber;
 
     @Column(name = "address")
@@ -71,23 +74,23 @@ public class CitizenProfile {
     private CitizenStatus status;
 
     /** The userId that created this profile row (the citizen themselves). */
-    @Column(name = "created_by", length = 36, updatable = false)
+    @Column(name = "createdBy", length = 36, updatable = false)
     private String createdBy;
 
     /** The officer's userId who verified (or flagged) this citizen; null until verified. */
-    @Column(name = "verified_by", length = 36)
+    @Column(name = "verifiedBy", length = 36)
     private String verifiedBy;
 
     /** When the citizen was verified (or flagged); null until then. */
-    @Column(name = "verified_at")
+    @Column(name = "verifiedAt")
     private LocalDateTime verifiedAt;
 
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "createdAt", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
-    @Column(name = "updated_at")
+    @Column(name = "updatedAt")
     private LocalDateTime updatedAt;
 
     public String getUserId() {

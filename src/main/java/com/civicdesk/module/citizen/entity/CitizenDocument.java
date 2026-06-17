@@ -1,5 +1,6 @@
 package com.civicdesk.module.citizen.entity;
 
+import com.civicdesk.common.id.NumericStringSequenceGenerator;
 import com.civicdesk.module.citizen.entity.converter.DocumentStatusConverter;
 import com.civicdesk.module.citizen.entity.enums.DocumentStatus;
 import com.civicdesk.module.citizen.entity.enums.DocumentType;
@@ -8,61 +9,80 @@ import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.Check;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * A document belonging to a citizen. Maps to the {@code citizen_document} table (snake_case).
+ * A document belonging to a citizen. Maps to the {@code citizen_document} table.
  *
- * <p>{@code document_id} and {@code citizen_id} are 16-character alphanumeric ids (the citizen id is
- * a plain reference, not a JPA relationship, to keep this module decoupled). The actual file is
- * stored on disk by {@code FileStorageService}; {@code file_path} holds the retrieval URL. The
- * on-disk name is generated (never the user's name) to prevent path traversal. {@code status}
+ * <p>{@code documentId} is a sequential numeric id rendered as a String (matching IAM's id
+ * strategy). {@code citizenId} is a plain reference to the owning citizen's {@code userId} (IAM
+ * {@code User}, length 36) — not a JPA relationship, to keep this module decoupled. The actual
+ * file is stored on disk by {@code FileStorageService}; {@code filePath} holds the retrieval URL.
+ * The on-disk name is generated (never the user's name) to prevent path traversal. {@code status}
  * persists as a single-character code (V/E/R) via {@link DocumentStatusConverter}.
+ *
+ * <p>Convention: the table name is snake_case ({@code citizen_document}) while column names are
+ * camelCase, matching IAM and grievance.
  */
 @Entity
 @Table(
         name = "citizen_document",
         // Backs findByCitizenId / countByCitizenId / findByDocumentIdAndCitizenId.
-        indexes = @Index(name = "idx_citizen_document_citizen_id", columnList = "citizen_id")
+        indexes = @Index(name = "idx_citizen_document_citizen_id", columnList = "citizenId")
 )
 public class CitizenDocument {
 
+    // Sequential numeric id rendered as a String (e.g. 50000001), matching IAM's id strategy.
     @Id
-    @Column(name = "document_id", length = 16, nullable = false, updatable = false)
+    @GeneratedValue(generator = "citizenDocumentIdSeq")
+    @GenericGenerator(
+            name = "citizenDocumentIdSeq",
+            type = NumericStringSequenceGenerator.class,
+            parameters = {
+                @Parameter(name = "sequence_name", value = "citizen_document_id_seq"),
+                @Parameter(name = "initial_value", value = "50000001"),
+                @Parameter(name = "increment_size", value = "1"),
+                @Parameter(name = "optimizer", value = "none")
+            })
+    @Column(name = "documentId", length = 36, nullable = false, updatable = false)
     private String documentId;
 
-    @Column(name = "citizen_id", length = 16, nullable = false)
+    /** The owning citizen's userId (IAM User, CHAR(36)). */
+    @Column(name = "citizenId", length = 36, nullable = false)
     private String citizenId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "document_type", nullable = false, length = 20)
-    @Check(constraints = "document_type in ('NationalID','ResidenceProof','BirthCertificate','IncomeCertificate')")
+    @Column(name = "documentType", nullable = false, length = 20)
+    @Check(constraints = "documentType in ('NationalID','ResidenceProof','BirthCertificate','IncomeCertificate')")
     private DocumentType documentType;
 
-    @Column(name = "file_name")
+    @Column(name = "fileName")
     private String fileName;
 
-    @Column(name = "file_path", length = 512)
+    @Column(name = "filePath", length = 512)
     private String filePath;
 
     // Short file extension only — one of pdf / jpg / jpeg / png, lowercased by the service.
-    @Column(name = "file_type", length = 10)
+    @Column(name = "fileType", length = 10)
     private String fileType;
 
-    @Column(name = "file_size_kb")
+    @Column(name = "fileSizeKb")
     private Integer fileSizeKb;
 
-    @Column(name = "issued_date")
+    @Column(name = "issuedDate")
     private LocalDate issuedDate;
 
-    @Column(name = "expiry_date")
+    @Column(name = "expiryDate")
     private LocalDate expiryDate;
 
     @Convert(converter = DocumentStatusConverter.class)
@@ -70,15 +90,15 @@ public class CitizenDocument {
     @Check(constraints = "status in ('V','E','R')")
     private DocumentStatus status;
 
-    // References users.userId (IAM, CHAR(36)); kept at length 36, not the citizen module's 16.
-    @Column(name = "verified_by", length = 36)
+    /** The officer's userId who verified this document (IAM User, CHAR(36)). */
+    @Column(name = "verifiedBy", length = 36)
     private String verifiedBy;
 
-    @Column(name = "verified_at")
+    @Column(name = "verifiedAt")
     private LocalDateTime verifiedAt;
 
     @CreationTimestamp
-    @Column(name = "uploaded_at", updatable = false)
+    @Column(name = "uploadedAt", updatable = false)
     private LocalDateTime uploadedAt;
 
     public String getDocumentId() {

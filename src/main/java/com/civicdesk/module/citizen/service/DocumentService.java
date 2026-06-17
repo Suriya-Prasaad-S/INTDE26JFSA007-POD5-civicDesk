@@ -13,7 +13,6 @@ import com.civicdesk.module.citizen.exception.InvalidRequestException;
 import com.civicdesk.module.citizen.exception.ResourceNotFoundException;
 import com.civicdesk.module.citizen.repository.CitizenDocumentRepository;
 import com.civicdesk.module.citizen.repository.CitizenProfileRepository;
-import com.civicdesk.module.citizen.support.IdGenerator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -98,7 +97,6 @@ public class DocumentService {
         }
 
         CitizenDocument document = new CitizenDocument();
-        document.setDocumentId(IdGenerator.newId());
         document.setCitizenId(citizenId);
         document.setDocumentType(type);
         document.setFileName(originalFileName);
