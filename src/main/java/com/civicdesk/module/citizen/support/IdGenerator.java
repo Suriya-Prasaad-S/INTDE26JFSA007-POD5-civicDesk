@@ -3,10 +3,12 @@ package com.civicdesk.module.citizen.support;
 import java.security.SecureRandom;
 
 /**
- * Generates 16-character alphanumeric identifiers for {@code citizenId} / {@code documentId}.
+ * Generates random 16-character alphanumeric names for documents stored on disk (the on-disk file
+ * name is generated, never derived from the user's file name, to prevent path traversal). Entity
+ * ids are no longer produced here — {@code documentId} uses the shared numeric sequence generator
+ * and a citizen profile is keyed by the IAM {@code userId}.
  *
- * <p>Replaces the earlier CHAR(36) UUID v4: shorter and human-friendlier, while still effectively
- * collision-free at this module's scale (62^16 ≈ 4.7e28 possible values, drawn from a SecureRandom).
+ * <p>Effectively collision-free at this module's scale (62^16 ≈ 4.7e28 values, from a SecureRandom).
  */
 public final class IdGenerator {
 
