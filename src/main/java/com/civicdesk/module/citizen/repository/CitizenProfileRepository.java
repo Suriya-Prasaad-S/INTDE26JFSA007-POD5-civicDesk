@@ -14,8 +14,8 @@ import java.util.List;
 @Repository
 public interface CitizenProfileRepository extends JpaRepository<CitizenProfile, String> {
 
-    /** Backs the "national ID already registered" (409) check at profile completion. */
-    boolean existsByNationalIdNumber(String nationalIdNumber);
+    /** Backs the "national ID already registered" (409) check — matched on the SHA-256 hash. */
+    boolean existsByNationalIdHash(String nationalIdHash);
 
     /** Backs the officer ward listing. */
     List<CitizenProfile> findByWard(String ward);

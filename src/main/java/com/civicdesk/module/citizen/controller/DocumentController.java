@@ -7,7 +7,6 @@ import com.civicdesk.module.citizen.service.DocumentService;
 import com.civicdesk.module.citizen.support.FileStorageService;
 import com.civicdesk.module.citizen.support.IdGenerator;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -28,13 +27,14 @@ import java.io.InputStream;
 
 /**
  * Citizen document endpoints under base path {@code /citizenProfile} (served below the
- * application context path {@code /civicDesk}).
+ * application context path {@code /civicDesk}). {@code citizenId} on these operations is the
+ * citizen's userId.
  *
  * <p>{@code uploadDocument} accepts a real {@code multipart/form-data} file: the bytes are written to
- * disk by {@link FileStorageService} under a generated name, {@code filePath} is set to the
- * retrieval URL, and the bytes are served back by {@link #downloadFile}. {@code status} values on the
- * API are single-character codes (V/E/R). JSON responses use the shared {@link ApiResponse}
- * envelope; {@link #downloadFile} streams raw bytes and so is exempt.
+ * disk by {@link FileStorageService} under a generated name, and are streamed back by the
+ * authorized {@link #downloadDocumentFile} endpoint. {@code status} values on the API are
+ * single-character codes (V/E/R). JSON responses use the shared {@link ApiResponse} envelope; the
+ * file download streams raw bytes and so is exempt.
  */
 @RestController
 @RequestMapping("/citizenProfile")
@@ -43,24 +43,16 @@ public class DocumentController {
     private final DocumentService documentService;
     private final FileStorageService fileStorage;
 
-    /** Base URL used to build a stored document's retrieval path (matches {@link #downloadFile}). */
-    private final String fileBaseUrl;
-
-    public DocumentController(
-            DocumentService documentService,
-            FileStorageService fileStorage,
-            @Value("${citizen.document.base-url:http://localhost:8081/civicDesk/citizenProfile/files}")
-            String fileBaseUrl) {
+    public DocumentController(DocumentService documentService, FileStorageService fileStorage) {
         this.documentService = documentService;
         this.fileStorage = fileStorage;
-        this.fileBaseUrl = fileBaseUrl;
     }
 
     /**
      * POST /{citizenId}/uploadDocument (multipart/form-data). Form parts: {@code file} (the
-     * upload) and {@code documentType}. The file is stored on disk; size/type/limit rules are
-     * enforced by the service (and the stored file is rolled back if the service rejects it).
-     * {@code citizenId} is the owning citizen's userId.
+     * upload) and {@code documentType}. The file is stored on disk under a generated name; size/
+     * type/limit rules are enforced by the service (and the stored file is rolled back if the
+     * service rejects it).
      */
     @PostMapping(value = "/{citizenId}/uploadDocument", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('CIT')")
@@ -77,7 +69,6 @@ public class DocumentController {
             throw new InvalidRequestException("Could not read the uploaded file");
         }
 
-        String storedFilePath = trimTrailingSlash(fileBaseUrl) + "/" + storedName;
         try {
             String documentId = documentService.uploadDocument(
                     citizenId,
@@ -85,7 +76,7 @@ public class DocumentController {
                     file.getOriginalFilename(),
                     file.getContentType(),
                     file.getSize(),
-                    storedFilePath);
+                    storedName);
             return ResponseEntity.status(201)
                     .body(ApiResponse.of("Document uploaded successfully", documentId));
         } catch (RuntimeException ex) {
@@ -124,9 +115,17 @@ public class DocumentController {
         return ResponseEntity.ok(ApiResponse.of("Document verified successfully", null));
     }
 
-    /** GET /files/{filename} — streams a stored document's bytes (used by {@code filePath}). */
-    @GetMapping("/files/{filename}")
-    public ResponseEntity<Resource> downloadFile(@PathVariable String filename) {
+    /**
+     * GET /{citizenId}/documents/{documentId}/file — streams the document's bytes. Authorized to
+     * the owning citizen or an officer (enforced in the service); replaces the old guessable
+     * {@code /files/{filename}} route.
+     */
+    @GetMapping("/{citizenId}/documents/{documentId}/file")
+    @PreAuthorize("hasAnyRole('CIT','FO','DS','ADM')")
+    public ResponseEntity<Resource> downloadDocumentFile(
+            @PathVariable String citizenId,
+            @PathVariable String documentId) {
+        String filename = documentService.resolveDownloadFileName(citizenId, documentId);
         Resource resource = fileStorage.load(filename);
         return ResponseEntity.ok()
                 .contentType(contentTypeFor(extensionOf(filename)))
@@ -137,10 +136,6 @@ public class DocumentController {
     // ------------------------------------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------------------------------------
-
-    private static String trimTrailingSlash(String s) {
-        return s.endsWith("/") ? s.substring(0, s.length() - 1) : s;
-    }
 
     /** Lowercased extension without the dot, or "" if none. */
     private static String extensionOf(String fileName) {

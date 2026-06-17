@@ -152,6 +152,18 @@ public class DocumentService {
         documentRepository.save(document);
     }
 
+    /**
+     * Resolves the stored file name for a document after authorizing the caller: the owning citizen
+     * (CIT) or any officer (FO/DS/ADM). 404 if the document does not exist for that citizen.
+     */
+    public String resolveDownloadFileName(String citizenId, String documentId) {
+        authorizeView(citizenId);
+        CitizenDocument document = documentRepository
+                .findByDocumentIdAndCitizenId(documentId, citizenId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found: " + documentId));
+        return document.getFilePath();
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------------------------------
@@ -161,6 +173,19 @@ public class DocumentService {
         if (!citizenId.equals(currentUserId())) {
             throw new ForbiddenActionException("You can only access your own documents");
         }
+    }
+
+    /** Document viewing is allowed for the owning citizen or any officer. */
+    private void authorizeView(String citizenId) {
+        String role = SecurityContextUtil.getCurrentRole();
+        if ("CIT".equals(role)) {
+            requireSelf(citizenId);
+            return;
+        }
+        if ("FO".equals(role) || "DS".equals(role) || "ADM".equals(role)) {
+            return;
+        }
+        throw new ForbiddenActionException("Not permitted to access this document");
     }
 
     /** Manual (verify-time) document transitions. Auto-expiry ({@code V->E}) is excluded. */

@@ -56,8 +56,13 @@ public class CitizenProfile {
     @Check(constraints = "gender in ('Male','Female','Other')")
     private Gender gender;
 
-    @Column(name = "nationalIdNumber", unique = true, length = 50)
-    private String nationalIdNumber;
+    /** SHA-256 hash of the national id — the raw value is never stored. Backs the uniqueness check. */
+    @Column(name = "nationalIdHash", unique = true, length = 64)
+    private String nationalIdHash;
+
+    /** Last 4 digits of the national id, kept only for masked display ({@code ****1234}). */
+    @Column(name = "nationalIdLast4", length = 4)
+    private String nationalIdLast4;
 
     @Column(name = "address")
     private String address;
@@ -117,12 +122,20 @@ public class CitizenProfile {
         this.gender = gender;
     }
 
-    public String getNationalIdNumber() {
-        return nationalIdNumber;
+    public String getNationalIdHash() {
+        return nationalIdHash;
     }
 
-    public void setNationalIdNumber(String nationalIdNumber) {
-        this.nationalIdNumber = nationalIdNumber;
+    public void setNationalIdHash(String nationalIdHash) {
+        this.nationalIdHash = nationalIdHash;
+    }
+
+    public String getNationalIdLast4() {
+        return nationalIdLast4;
+    }
+
+    public void setNationalIdLast4(String nationalIdLast4) {
+        this.nationalIdLast4 = nationalIdLast4;
     }
 
     public String getAddress() {

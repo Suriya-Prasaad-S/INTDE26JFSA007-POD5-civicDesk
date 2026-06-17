@@ -1,5 +1,6 @@
 package com.civicdesk.module.citizen.service;
 
+import com.civicdesk.common.util.NationalIdUtil;
 import com.civicdesk.common.util.SecurityContextUtil;
 import com.civicdesk.module.citizen.dto.request.CompleteCitizenProfileRequest;
 import com.civicdesk.module.citizen.dto.request.UpdateCitizenProfileRequest;
@@ -80,14 +81,15 @@ public class CitizenService {
                     "Profile can be completed only after verification (current status: "
                             + profile.getStatus().getCode() + ")");
         }
-        if (citizenRepository.existsByNationalIdNumber(request.nationalIdNumber())) {
-            throw new DuplicateResourceException(
-                    "National ID already registered: " + request.nationalIdNumber());
+        String nationalIdHash = NationalIdUtil.hash(request.nationalIdNumber());
+        if (citizenRepository.existsByNationalIdHash(nationalIdHash)) {
+            throw new DuplicateResourceException("National ID already registered");
         }
 
         profile.setDateOfBirth(request.dateOfBirth());
         profile.setGender(parseGender(request.gender()));
-        profile.setNationalIdNumber(request.nationalIdNumber());
+        profile.setNationalIdHash(nationalIdHash);
+        profile.setNationalIdLast4(last4(request.nationalIdNumber()));
         profile.setAddress(request.address());
         profile.setWard(request.ward());
         profile.setZone(request.zone());
@@ -210,7 +212,7 @@ public class CitizenService {
                 user == null ? null : user.getPhone(),
                 p.getDateOfBirth(),
                 p.getGender() == null ? null : p.getGender().name(),
-                maskNationalId(p.getNationalIdNumber()),
+                maskNationalId(p.getNationalIdLast4()),
                 p.getAddress(),
                 p.getWard(),
                 p.getZone(),
@@ -224,16 +226,15 @@ public class CitizenService {
         return user == null ? null : user.getName();
     }
 
-    /** Keeps only the last 4 characters, e.g. {@code IND1234567890 -> ****7890}. */
-    private static String maskNationalId(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return null;
-        }
+    /** The last 4 characters of the national id (or the whole value if shorter). */
+    private static String last4(String raw) {
         String trimmed = raw.trim();
-        if (trimmed.length() <= 4) {
-            return "****";
-        }
-        return "****" + trimmed.substring(trimmed.length() - 4);
+        return trimmed.length() <= 4 ? trimmed : trimmed.substring(trimmed.length() - 4);
+    }
+
+    /** Builds the masked national id for display from the stored last-4 digits ({@code ****1234}). */
+    private static String maskNationalId(String last4) {
+        return (last4 == null || last4.isBlank()) ? null : "****" + last4;
     }
 
     /** Case-insensitive parse of the gender name (Male/Female/Other). */

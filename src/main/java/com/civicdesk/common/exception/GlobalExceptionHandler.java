@@ -1,7 +1,6 @@
 package com.civicdesk.common.exception;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Comparator;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,7 +11,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
@@ -30,15 +28,15 @@ import com.civicdesk.common.exception.grievance.InvalidGrievanceStateException;
 import com.civicdesk.common.exception.grievance.InvalidUserRoleException;
 import com.civicdesk.common.exception.grievance.UnauthorizedGrievanceAccessException;
 import com.civicdesk.common.response.ApiResponse;
-import com.civicdesk.common.response.ErrorResponse;
 
 /**
- * Central exception handler. Every controller in the application routes its
- * failures through here so that clients always receive a consistent error body.
+ * Central exception handler. Every controller in the application routes its failures through here,
+ * and they all return the shared {@link ApiResponse} envelope ({@code {message, data}}) — the IAM
+ * convention, now applied to the grievance and citizen modules too.
  *
- * <p>Grievance- and citizen-module failures are returned as {@link ErrorResponse};
- * IAM-module failures are returned as {@link ApiResponse}. Unifying these two error
- * shapes is a follow-up the team should align on.
+ * <p>Validation failures return the <b>first</b> field error in {@code message} (presence
+ * constraints such as {@code @NotBlank}/{@code @NotNull} take precedence over format constraints
+ * on the same field).
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -46,128 +44,101 @@ public class GlobalExceptionHandler {
     // --- Grievance module ---
 
     @ExceptionHandler(GrievanceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleGrievanceNotFound(
-            GrievanceNotFoundException ex, WebRequest request) {
-        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    public ResponseEntity<ApiResponse> handleGrievanceNotFound(GrievanceNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler({InvalidGrievanceDataException.class, InvalidUserRoleException.class})
-    public ResponseEntity<ErrorResponse> handleGrievanceBadRequest(
-            RuntimeException ex, WebRequest request) {
-        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    public ResponseEntity<ApiResponse> handleGrievanceBadRequest(RuntimeException ex) {
+        return error(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler({GrievanceCreationException.class, GrievanceActionCreationException.class})
-    public ResponseEntity<ErrorResponse> handleGrievancePersistence(
-            RuntimeException ex, WebRequest request) {
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
+    public ResponseEntity<ApiResponse> handleGrievancePersistence(RuntimeException ex) {
+        return error(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
     }
 
     @ExceptionHandler(UnauthorizedGrievanceAccessException.class)
-    public ResponseEntity<ErrorResponse> handleUnauthorizedGrievanceAccess(
-            UnauthorizedGrievanceAccessException ex, WebRequest request) {
-        return build(HttpStatus.FORBIDDEN, ex.getMessage(), request);
+    public ResponseEntity<ApiResponse> handleUnauthorizedGrievanceAccess(
+            UnauthorizedGrievanceAccessException ex) {
+        return error(HttpStatus.FORBIDDEN, ex.getMessage());
     }
 
     @ExceptionHandler(InvalidGrievanceStateException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidGrievanceState(
-            InvalidGrievanceStateException ex, WebRequest request) {
-        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    public ResponseEntity<ApiResponse> handleInvalidGrievanceState(InvalidGrievanceStateException ex) {
+        return error(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(ActionNotEditableException.class)
-    public ResponseEntity<ErrorResponse> handleActionNotEditable(
-            ActionNotEditableException ex, WebRequest request) {
-        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    public ResponseEntity<ApiResponse> handleActionNotEditable(ActionNotEditableException ex) {
+        return error(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(ActionNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleActionNotFound(
-            ActionNotFoundException ex, WebRequest request) {
-        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    public ResponseEntity<ApiResponse> handleActionNotFound(ActionNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
-    // --- Citizen module (returns ErrorResponse, same shape as grievance) ---
+    // --- Citizen module ---
 
     // FQN on the type: this package already has an (IAM) ResourceNotFoundException, so the citizen
     // one is referenced fully-qualified to avoid the name clash.
     @ExceptionHandler(com.civicdesk.common.exception.citizen.ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleCitizenNotFound(
-            com.civicdesk.common.exception.citizen.ResourceNotFoundException ex, WebRequest request) {
-        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    public ResponseEntity<ApiResponse> handleCitizenNotFound(
+            com.civicdesk.common.exception.citizen.ResourceNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler({DuplicateResourceException.class, BusinessRuleException.class})
-    public ResponseEntity<ErrorResponse> handleCitizenConflict(
-            RuntimeException ex, WebRequest request) {
-        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    public ResponseEntity<ApiResponse> handleCitizenConflict(RuntimeException ex) {
+        return error(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(ForbiddenActionException.class)
-    public ResponseEntity<ErrorResponse> handleForbiddenAction(
-            ForbiddenActionException ex, WebRequest request) {
-        return build(HttpStatus.FORBIDDEN, ex.getMessage(), request);
+    public ResponseEntity<ApiResponse> handleForbiddenAction(ForbiddenActionException ex) {
+        return error(HttpStatus.FORBIDDEN, ex.getMessage());
     }
 
     @ExceptionHandler(InvalidRequestException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidRequest(
-            InvalidRequestException ex, WebRequest request) {
-        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    public ResponseEntity<ApiResponse> handleInvalidRequest(InvalidRequestException ex) {
+        return error(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     // --- Request/multipart failures (used by the citizen document upload) ---
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<ErrorResponse> handleTooLarge(
-            MaxUploadSizeExceededException ex, WebRequest request) {
-        return build(HttpStatus.PAYLOAD_TOO_LARGE, "Uploaded file is too large", request);
+    public ResponseEntity<ApiResponse> handleTooLarge(MaxUploadSizeExceededException ex) {
+        return error(HttpStatus.PAYLOAD_TOO_LARGE, "Uploaded file is too large");
     }
 
     @ExceptionHandler({MissingServletRequestPartException.class,
             MissingServletRequestParameterException.class})
-    public ResponseEntity<ErrorResponse> handleMissingPartOrParam(
-            Exception ex, WebRequest request) {
-        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    public ResponseEntity<ApiResponse> handleMissingPartOrParam(Exception ex) {
+        return error(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleUnreadable(
-            HttpMessageNotReadableException ex, WebRequest request) {
-        return build(HttpStatus.BAD_REQUEST, "Malformed request body", request);
+    public ResponseEntity<ApiResponse> handleUnreadable(HttpMessageNotReadableException ex) {
+        return error(HttpStatus.BAD_REQUEST, "Malformed request body");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(
-            MethodArgumentNotValidException ex, WebRequest request) {
-        List<String> details = ex.getBindingResult().getFieldErrors().stream()
-                .map(this::formatFieldError)
-                .toList();
-
-        // `message` joins all field errors so IAM-style callers reading $.message always
-        // find the relevant text — even when one field trips several validators (e.g. a
-        // blank phone fails both @NotBlank and @Pattern). The frontend uses the structured
-        // `details` list to show errors per field.
-        String message = details.isEmpty()
-                ? "Validation failed for the submitted request"
-                : String.join(", ", details);
-
-        ErrorResponse body = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message(message)
-                .path(extractPath(request))
-                .details(details)
-                .build();
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    public ResponseEntity<ApiResponse> handleValidation(MethodArgumentNotValidException ex) {
+        // Return only the FIRST field error. Presence constraints (@NotBlank/@NotNull/@NotEmpty)
+        // rank ahead of format constraints so a blank field reports "x is required" rather than a
+        // format message when one field trips several validators.
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .min(Comparator.comparingInt(GlobalExceptionHandler::constraintRank))
+                .map(FieldError::getDefaultMessage)
+                .orElse("Validation failed for the submitted request");
+        return error(HttpStatus.BAD_REQUEST, message);
     }
 
     /** Catch-all so that no unexpected error ever leaks a raw stack trace to the client. */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex, WebRequest request) {
-        return build(HttpStatus.INTERNAL_SERVER_ERROR,
-                "An unexpected error occurred. Please try again later.", request);
+    public ResponseEntity<ApiResponse> handleUnexpected(Exception ex) {
+        return error(HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected error occurred. Please try again later.");
     }
 
     // --- IAM module ---
@@ -226,25 +197,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(404).body(ApiResponse.error(e.getMessage()));
     }
 
-    // --- Helpers (grievance ErrorResponse builder) ---
+    // --- Helpers ---
 
-    private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, WebRequest request) {
-        ErrorResponse body = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(status.value())
-                .error(status.getReasonPhrase())
-                .message(message)
-                .path(extractPath(request))
-                .build();
-        return ResponseEntity.status(status).body(body);
+    private static ResponseEntity<ApiResponse> error(HttpStatus status, String message) {
+        return ResponseEntity.status(status).body(ApiResponse.error(message));
     }
 
-    private String formatFieldError(FieldError fieldError) {
-        return fieldError.getField() + ": " + fieldError.getDefaultMessage();
-    }
-
-    private String extractPath(WebRequest request) {
-        // WebRequest description is in the form "uri=/civicDesk/grievance/createGrievance"
-        return request.getDescription(false).replaceFirst("^uri=", "");
+    /** Presence constraints rank first (0) so "x is required" wins over format messages (1). */
+    private static int constraintRank(FieldError fieldError) {
+        String code = fieldError.getCode();
+        if (code != null
+                && (code.startsWith("NotBlank") || code.startsWith("NotNull") || code.startsWith("NotEmpty"))) {
+            return 0;
+        }
+        return 1;
     }
 }
