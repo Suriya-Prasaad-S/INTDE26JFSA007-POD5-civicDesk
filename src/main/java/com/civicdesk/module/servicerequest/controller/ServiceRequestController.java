@@ -37,15 +37,16 @@ import java.util.List;
 
 /**
  * REST endpoints for the Service Request Management module, grouped as: catalog services,
- * service requests, and documents. All paths sit under {@code /civicDesk/serviceRequest}.
+ * service requests, and documents. Mapped at {@code /serviceRequest}; with the application's
+ * {@code /civicDesk} context-path the external paths are {@code /civicDesk/serviceRequest/**}.
  *
- * <p>Role-based authorization (Admin/Citizen/Officer/Supervisor) and the corresponding
- * 401/403 responses are intentionally not enforced yet — authentication is wired up once
- * the IAM module lands. Business-rule and data checks (not found, invalid transition,
- * inactive service, bad file type, etc.) are enforced here and now.</p>
+ * <p>Authentication is owned by the IAM module. These endpoints are currently permitted in
+ * {@code SecurityConfig} (role-based authorization on them is a follow-up). Business-rule and
+ * data checks (not found, invalid transition, inactive service, bad file type, etc.) are
+ * enforced here and now.</p>
  */
 @RestController
-@RequestMapping("/civicDesk/serviceRequest")
+@RequestMapping("/serviceRequest")
 public class ServiceRequestController {
 
     @Autowired

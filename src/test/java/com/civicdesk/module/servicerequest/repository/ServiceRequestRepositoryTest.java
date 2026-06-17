@@ -6,8 +6,8 @@ import com.civicdesk.module.serviceRequest.entity.enums.RequestStatus;
 import com.civicdesk.module.serviceRequest.entity.enums.ServiceCategory;
 import com.civicdesk.module.serviceRequest.entity.enums.ServiceStatus;
 import com.civicdesk.module.serviceRequest.entity.external.CitizenProfile;
-import com.civicdesk.module.serviceRequest.entity.external.Department;
-import com.civicdesk.module.serviceRequest.entity.external.User;
+import com.civicdesk.module.iam.entity.Department;
+import com.civicdesk.module.iam.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,12 +41,24 @@ class ServiceRequestRepositoryTest {
 
     @BeforeEach
     void seed() {
-        Department deptA = em.persist(new Department("DEP-A", "Revenue", "rev@city.gov"));
-        Department deptB = em.persist(new Department("DEP-B", "Works", "works@city.gov"));
+        Department deptA = new Department("Revenue");
+        deptA.setDepartmentId("DEP-A");
+        deptA = em.persist(deptA);
+        Department deptB = new Department("Works");
+        deptB.setDepartmentId("DEP-B");
+        deptB = em.persist(deptB);
 
         citizenA = em.persist(new CitizenProfile("CIT-A", "USR-A", "NID-A", "addr", "W1", "Z1"));
         citizenB = em.persist(new CitizenProfile("CIT-B", "USR-B", "NID-B", "addr", "W2", "Z2"));
-        officer = em.persist(new User("OFF-1", "Olivia", "olivia@city.gov", "555", "Officer", "DEP-A", "A"));
+
+        User officerEntity = new User();
+        officerEntity.setName("Olivia");
+        officerEntity.setEmail("olivia@city.gov");
+        officerEntity.setPhone("555");
+        officerEntity.setRole("FO");
+        officerEntity.setDepartmentId("DEP-A");
+        officerEntity.setStatus("A");
+        officer = em.persist(officerEntity);
 
         catalogDeptA = em.persist(catalog("SVC-A", "Birth Certificate", deptA, ServiceCategory.Certificate));
         catalogDeptB = em.persist(catalog("SVC-B", "Drainage", deptB, ServiceCategory.Utility));
@@ -98,7 +110,7 @@ class ServiceRequestRepositoryTest {
     @Test
     @DisplayName("countByAssignedOfficerAndStatusNotIn excludes terminal requests from the workload")
     void countActiveWorkload() {
-        User managed = em.find(User.class, "OFF-1");
+        User managed = em.find(User.class, officer.getUserId());
         // All three requests are assigned to OFF-1: REQ-1 (Submitted) and REQ-3 (UnderReview)
         // are non-terminal; REQ-2 (Completed) is terminal and must not count.
         long active = repository.countByAssignedOfficerAndStatusNotIn(

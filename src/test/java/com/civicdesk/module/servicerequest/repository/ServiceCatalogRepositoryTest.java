@@ -3,7 +3,7 @@ package com.civicdesk.module.serviceRequest.repository;
 import com.civicdesk.module.serviceRequest.entity.ServiceCatalog;
 import com.civicdesk.module.serviceRequest.entity.enums.ServiceCategory;
 import com.civicdesk.module.serviceRequest.entity.enums.ServiceStatus;
-import com.civicdesk.module.serviceRequest.entity.external.Department;
+import com.civicdesk.module.iam.entity.Department;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,7 +28,9 @@ class ServiceCatalogRepositoryTest {
 
     @BeforeEach
     void seed() {
-        Department dept = em.persist(new Department("DEP-A", "Revenue", "rev@city.gov"));
+        Department dept = new Department("Revenue");
+        dept.setDepartmentId("DEP-A");
+        dept = em.persist(dept);
         em.persist(catalog("SVC-1", "Birth Certificate", dept, ServiceCategory.Certificate, ServiceStatus.Active));
         em.persist(catalog("SVC-2", "Income Certificate", dept, ServiceCategory.Certificate, ServiceStatus.Active));
         em.persist(catalog("SVC-3", "Water Connection", dept, ServiceCategory.Utility, ServiceStatus.Active));

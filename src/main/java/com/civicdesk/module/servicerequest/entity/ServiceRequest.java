@@ -2,7 +2,7 @@ package com.civicdesk.module.serviceRequest.entity;
 
 import com.civicdesk.module.serviceRequest.entity.enums.RequestStatus;
 import com.civicdesk.module.serviceRequest.entity.external.CitizenProfile;
-import com.civicdesk.module.serviceRequest.entity.external.User;
+import com.civicdesk.module.iam.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

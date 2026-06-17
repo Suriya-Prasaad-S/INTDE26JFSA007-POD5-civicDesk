@@ -10,8 +10,8 @@ import com.civicdesk.module.serviceRequest.dto.response.ServiceListItemResponse;
 import com.civicdesk.module.serviceRequest.entity.ServiceCatalog;
 import com.civicdesk.module.serviceRequest.entity.enums.ServiceCategory;
 import com.civicdesk.module.serviceRequest.entity.enums.ServiceStatus;
-import com.civicdesk.module.serviceRequest.entity.external.Department;
-import com.civicdesk.module.serviceRequest.repository.DepartmentRepository;
+import com.civicdesk.module.iam.entity.Department;
+import com.civicdesk.module.iam.repository.DepartmentRepository;
 import com.civicdesk.module.serviceRequest.repository.ServiceCatalogRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,7 +52,8 @@ class ServiceCatalogServiceTest {
     void setUp() {
         // ObjectMapper is a real collaborator (not a mock): toJson/fromJson are pure helpers.
         service = new ServiceCatalogService(catalogRepository, departmentRepository, new ObjectMapper());
-        department = new Department("DEP-1", "Revenue", "revenue@city.gov");
+        department = new Department("Revenue");
+        department.setDepartmentId("DEP-1");
     }
 
     @Nested

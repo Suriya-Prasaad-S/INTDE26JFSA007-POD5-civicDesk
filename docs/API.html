@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>CivicDesk Module 2.1 (IAM) — API Reference</title>
+<style>
+  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #1a1a1a; }
+  h1 { font-size: 21pt; color: #2b3a8c; border-bottom: 2px solid #2b3a8c; padding-bottom: 4px; }
+  h2 { font-size: 14pt; color: #1f6f54; margin-top: 20px; border-bottom: 1px solid #ccc; padding-bottom: 2px; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+  th, td { border: 1px solid #9aa0a6; padding: 5px 8px; text-align: left; vertical-align: top; font-size: 10.5pt; }
+  th { background: #eef1f7; }
+  pre { background: #f5f5f5; border: 1px solid #ddd; padding: 10px; font-family: Consolas, monospace; font-size: 9.5pt; white-space: pre-wrap; }
+  code { font-family: Consolas, monospace; background: #f0f0f0; padding: 1px 4px; }
+  .meta { color: #555; }
+</style>
+</head>
+<body>
+
+<h1>CivicDesk — Module 2.1 (IAM) · API Reference</h1>
+<p class="meta">Base URL: <code>http://localhost:8081/civicDesk/iam</code> &nbsp;|&nbsp; Swagger UI: <code>/civicDesk/iam/swagger-ui.html</code></p>
+
+<h2>Conventions</h2>
+<ul>
+<li><b>Auth</b>: stateless JWT (HS256). Send <code>Authorization: Bearer &lt;token&gt;</code> on protected calls.
+  Token claims: <code>userId</code>, <code>role</code> only. Lifetime 1800 s (30 min).</li>
+<li><b>Sliding expiry</b>: when ≤600 s remain, a fresh token is returned on the
+  <code>Authorization</code> response header (exposed via <code>Access-Control-Expose-Headers</code>).</li>
+<li><b>Roles</b>: CITIZEN, FIELD_OFFICER, DEPT_SUPERVISOR, ENGINEER, COMPLIANCE_OFFICER, ADMIN.</li>
+<li><b>Error codes</b>: 400 validation/bad request · 401 bad credentials / no token · 403 wrong role,
+  wrong portal, or password not set · 404 not found · 409 duplicate email · 423 account suspended.</li>
+</ul>
+
+<h2>Endpoints</h2>
+<table>
+<tr><th>Method &amp; path</th><th>Access</th><th>Request body</th><th>Success response</th></tr>
+
+<tr>
+<td>POST <code>/auth/register</code></td>
+<td>Public</td>
+<td>name, email, password (≥8), phone?, dateOfBirth?, gender?, nationalId?, address?, ward?, zone?</td>
+<td>201 <code>{ "message": "Registration successful" }</code></td>
+</tr>
+
+<tr>
+<td>POST <code>/auth/citizen/login</code></td>
+<td>Public (CITIZEN only)</td>
+<td>email, password</td>
+<td>200 <code>{ "message": "Login successful", "data": { token, userId, role, expiresIn:1800 } }</code></td>
+</tr>
+
+<tr>
+<td>POST <code>/auth/staff/login</code></td>
+<td>Public (staff only)</td>
+<td>email, password</td>
+<td>200 <code>{ "message": "Login successful", "data": { token, userId, role, expiresIn:1800 } }</code></td>
+</tr>
+
+<tr>
+<td>POST <code>/auth/setPassword</code></td>
+<td>Public (one-time)</td>
+<td>email, newPassword (≥8)</td>
+<td>200 <code>{ "message": "Password set successfully. Please login." }</code></td>
+</tr>
+
+<tr>
+<td>POST <code>/auth/logout</code></td>
+<td>Authenticated</td>
+<td>—</td>
+<td>200 <code>{ "message": "Logout successful" }</code></td>
+</tr>
+
+<tr>
+<td>GET <code>/users/me</code></td>
+<td>Authenticated</td>
+<td>—</td>
+<td>200 <code>{ "data": { userId, name, email, phone, role, departmentId, status, createdAt } }</code></td>
+</tr>
+
+<tr>
+<td>POST <code>/users</code></td>
+<td>ADMIN, DEPT_SUPERVISOR</td>
+<td>name, email, phone?, role, departmentId (ADMIN: required + must exist; SUPERVISOR: taken from JWT, body ignored)</td>
+<td>201 <code>{ "message": "User created successfully" }</code></td>
+</tr>
+
+<tr>
+<td>GET <code>/users?page&amp;size</code></td>
+<td>ADMIN (all) · DEPT_SUPERVISOR (own dept)</td>
+<td>—</td>
+<td>200 <code>{ "data": { content:[...], totalElements, totalPages, currentPage } }</code></td>
+</tr>
+
+<tr>
+<td>PUT <code>/users/{id}/status</code></td>
+<td>ADMIN only</td>
+<td>status (Active | Inactive | Suspended)</td>
+<td>200 <code>{ "message": "User status updated to {status}" }</code></td>
+</tr>
+
+<tr>
+<td>GET <code>/auditLogs?page&amp;size</code></td>
+<td>ADMIN, COMPLIANCE_OFFICER</td>
+<td>—</td>
+<td>200 <code>{ "data": { content:[{ auditId, userId, action, module, ipAddress, timestamp }], totalElements, totalPages, currentPage } }</code></td>
+</tr>
+
+<tr>
+<td>GET <code>/departments</code></td>
+<td>ADMIN, DEPT_SUPERVISOR</td>
+<td>—</td>
+<td>200 <code>{ "data": [ { departmentId, name, departmentSupervisorId } ] }</code></td>
+</tr>
+</table>
+
+<h2>Notes</h2>
+<ul>
+<li><b>Paths</b> are relative to the context path <code>/civicDesk/iam</code> (e.g. full URL
+  <code>http://localhost:8081/civicDesk/iam/auth/staff/login</code>).</li>
+<li><b>First-login flow</b>: admin/supervisor-created accounts have no password
+  (<code>isPasswordSet=false</code>); staff login returns 403 "Please set your password before logging in"
+  until <code>/auth/setPassword</code> succeeds (works once). Citizens set their password at registration.</li>
+<li><b>Create user</b>: ADMIN creates DEPT_SUPERVISOR only (and the department's
+  <code>departmentSupervisorId</code> is set to the new user); DEPT_SUPERVISOR creates
+  FIELD_OFFICER / ENGINEER / COMPLIANCE_OFFICER within its own department.</li>
+<li><b>Seeded on startup</b>: 6 departments (Infrastructure, Public Health, Licensing &amp; Compliance,
+  Citizen Services, Administration, Compliance &amp; Audit) and a default ADMIN
+  (<code>admin@civicdesk.gov</code> / <code>Admin@12345</code>, overridable via <code>ADMIN_*</code> env vars).</li>
+<li>Audit actions: REGISTER, LOGIN, LOGOUT, CREATE_USER, UPDATE_STATUS, SET_PASSWORD, SEED_ADMIN.</li>
+</ul>
+
+</body>
+</html>

@@ -2,7 +2,7 @@ package com.civicdesk.module.serviceRequest.repository;
 
 import com.civicdesk.module.serviceRequest.entity.ServiceRequest;
 import com.civicdesk.module.serviceRequest.entity.enums.RequestStatus;
-import com.civicdesk.module.serviceRequest.entity.external.User;
+import com.civicdesk.module.iam.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

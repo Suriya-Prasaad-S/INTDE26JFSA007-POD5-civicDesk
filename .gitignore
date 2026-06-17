@@ -1,5 +1,6 @@
 HELP.md
 target/
+docs/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
@@ -29,8 +30,8 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### VS Code ###
 .vscode/
+.claude/
 
 ### CivicDesk runtime ###
 # Local document uploads (Service Request Management, Phase 1 filesystem storage)

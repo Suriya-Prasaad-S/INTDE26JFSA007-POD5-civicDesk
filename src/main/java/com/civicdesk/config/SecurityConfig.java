@@ -1,33 +1,60 @@
-// package com.civicdesk.config;
+package com.civicdesk.config;
 
-// import org.springframework.context.annotation.Bean;
-// import org.springframework.context.annotation.Configuration;
-// import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-// import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-// import org.springframework.security.web.SecurityFilterChain;
+import com.civicdesk.module.iam.security.JwtAuthFilter;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-// /**
-//  * Temporary open security configuration.
-//  *
-//  * <p>spring-boot-starter-security is on the classpath, so without this bean Spring
-//  * Security auto-secures every endpoint with HTTP Basic and a generated password —
-//  * which would make the module's APIs return 401. Authentication for the CivicDesk
-//  * platform is owned by the IAM module; until that lands, this permits all requests so
-//  * the Service Request endpoints are testable. CSRF is disabled so POST / multipart
-//  * uploads work without a token.</p>
-//  *
-//  * <p><b>Replace before production:</b> swap {@code permitAll()} for the real
-//  * JWT-based authorization once IAM is integrated.</p>
-//  */
-// @Configuration
-// @EnableWebSecurity
-// public class SecurityConfig {
+@Configuration
+@EnableMethodSecurity
+public class SecurityConfig {
 
-//     @Bean
-//     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-//         http
-//                 .csrf(csrf -> csrf.disable())
-//                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
-//         return http.build();
-//     }
-// }
+    private final JwtAuthFilter jwtAuthFilter;
+
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .cors(Customizer.withDefaults())
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/iam/auth/register").permitAll()
+                        .requestMatchers("/iam/auth/citizen/login").permitAll()
+                        .requestMatchers("/iam/auth/staff/login").permitAll()
+                        .requestMatchers("/iam/auth/setPassword").permitAll()
+                        // Service Request module — left open for now (authentication is
+                        // owned by IAM; role enforcement on these endpoints is a follow-up).
+                        .requestMatchers("/serviceRequest/**").permitAll()
+                        // Swagger / OpenAPI UI
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**").permitAll()
+                        .anyRequest().authenticated()
+                )
+                // Return a clean 401 (not the servlet default) when no/invalid token is present.
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(
+                        (request, response, authException) ->
+                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(10);
+    }
+}

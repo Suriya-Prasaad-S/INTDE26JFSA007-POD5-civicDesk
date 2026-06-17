@@ -1,73 +1,91 @@
 package com.civicdesk.common.exception;
 
-import com.civicdesk.common.response.ApiError;
-import org.springframework.http.HttpStatus;
+import java.util.stream.Collectors;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
+import com.civicdesk.common.response.ApiResponse;
 
 /**
- * Translates exceptions thrown anywhere in the module into the standard {@link ApiError}
- * body (a single {@code message}) with the correct HTTP status. Centralising this keeps
- * controllers and services free of try/catch and guarantees a consistent error contract.
+ * Catches IAM / Audit-log exceptions and maps them to the standard {@link ApiResponse}
+ * error envelope ({@code { "message": "..." }}) with a consistent HTTP status.
+ *
+ * <p>Scoped to the {@code iam} and {@code auditlog} packages so the Service Request
+ * module can keep its own error contract (see
+ * {@code com.civicdesk.module.serviceRequest.exception.ServiceRequestExceptionHandler}).
+ * The shared exception types ({@link ResourceNotFoundException}, {@link ForbiddenException},
+ * {@link BadRequestException}) are handled by whichever advice owns the originating
+ * controller, so both modules keep their original response shapes.</p>
  */
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = {
+        "com.civicdesk.module.iam",
+        "com.civicdesk.module.auditlog"
+})
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiError> handleNotFound(ResourceNotFoundException ex) {
-        return build(HttpStatus.NOT_FOUND, ex.getMessage());
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiResponse> handleBadCredentials(BadCredentialsException e) {
+        return ResponseEntity.status(401).body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(TokenExpiredException.class)
+    public ResponseEntity<ApiResponse> handleTokenExpired(TokenExpiredException e) {
+        return ResponseEntity.status(401).body(ApiResponse.error(e.getMessage()));
     }
 
     @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<ApiError> handleForbidden(ForbiddenException ex) {
-        return build(HttpStatus.FORBIDDEN, ex.getMessage());
+    public ResponseEntity<ApiResponse> handleForbidden(ForbiddenException e) {
+        return ResponseEntity.status(403).body(ApiResponse.error(e.getMessage()));
     }
 
-    @ExceptionHandler(UnprocessableEntityException.class)
-    public ResponseEntity<ApiError> handleUnprocessable(UnprocessableEntityException ex) {
-        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse> handleAccessDenied(AccessDeniedException e) {
+        // Raised by @PreAuthorize when a caller's role is not permitted on an endpoint.
+        return ResponseEntity.status(403).body(ApiResponse.error("Access denied"));
+    }
+
+    @ExceptionHandler(PasswordNotSetException.class)
+    public ResponseEntity<ApiResponse> handlePasswordNotSet(PasswordNotSetException e) {
+        // Account exists but the owner hasn't set a password yet.
+        return ResponseEntity.status(403).body(ApiResponse.error(e.getMessage()));
     }
 
     @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ApiError> handleBadRequest(BadRequestException ex) {
-        return build(HttpStatus.BAD_REQUEST, ex.getMessage());
+    public ResponseEntity<ApiResponse> handleBadRequest(BadRequestException e) {
+        return ResponseEntity.status(400).body(ApiResponse.error(e.getMessage()));
     }
 
-    @ExceptionHandler(ConflictException.class)
-    public ResponseEntity<ApiError> handleConflict(ConflictException ex) {
-        return build(HttpStatus.CONFLICT, ex.getMessage());
+    @ExceptionHandler(AccountSuspendedException.class)
+    public ResponseEntity<ApiResponse> handleSuspended(AccountSuspendedException e) {
+        // 423 Locked — the account exists and credentials are valid, but it is suspended.
+        return ResponseEntity.status(423).body(ApiResponse.error(e.getMessage()));
     }
 
-    /** Bean-validation failures on @Valid request bodies → 400 with the field messages folded in. */
+    @ExceptionHandler(AccountInactiveException.class)
+    public ResponseEntity<ApiResponse> handleInactive(AccountInactiveException e) {
+        // 403 Forbidden — credentials are valid but the account is deactivated (neutral lifecycle state).
+        return ResponseEntity.status(403).body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(DuplicateEmailException.class)
+    public ResponseEntity<ApiResponse> handleDuplicate(DuplicateEmailException e) {
+        return ResponseEntity.status(409).body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiResponse> handleNotFound(ResourceNotFoundException e) {
+        return ResponseEntity.status(404).body(ApiResponse.error(e.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
-        Set<String> messages = new LinkedHashSet<>();
-        for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
-            messages.add(fieldError.getDefaultMessage());
-        }
-        return build(HttpStatus.BAD_REQUEST, "Validation failed. " + String.join("; ", messages) + ".");
-    }
-
-    @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<ApiError> handleMaxSize(MaxUploadSizeExceededException ex) {
-        return build(HttpStatus.BAD_REQUEST, "Uploaded file exceeds the maximum allowed size");
-    }
-
-    /** Catch-all so unexpected failures still return the standard JSON shape, not a stack trace. */
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiError> handleGeneric(Exception ex) {
-        return build(HttpStatus.INTERNAL_SERVER_ERROR,
-                "An unexpected error occurred: " + ex.getMessage());
-    }
-
-    private ResponseEntity<ApiError> build(HttpStatus status, String message) {
-        return ResponseEntity.status(status).body(new ApiError(message));
+    public ResponseEntity<ApiResponse> handleValidation(MethodArgumentNotValidException e) {
+        String msg = e.getBindingResult().getFieldErrors().stream()
+                .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
+                .collect(Collectors.joining(", "));
+        return ResponseEntity.status(400).body(ApiResponse.error(msg));
     }
 }

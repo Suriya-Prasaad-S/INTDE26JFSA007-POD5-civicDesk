@@ -2,10 +2,10 @@ package com.civicdesk.module.serviceRequest.service;
 
 import com.civicdesk.common.exception.ForbiddenException;
 import com.civicdesk.common.exception.ResourceNotFoundException;
+import com.civicdesk.module.iam.entity.User;
+import com.civicdesk.module.iam.repository.UserRepository;
 import com.civicdesk.module.serviceRequest.entity.external.CitizenProfile;
-import com.civicdesk.module.serviceRequest.entity.external.User;
 import com.civicdesk.module.serviceRequest.repository.CitizenProfileRepository;
-import com.civicdesk.module.serviceRequest.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,7 +36,14 @@ class CitizenLookupTest {
     }
 
     private User account(String status) {
-        return new User("USR-1", "Carl Citizen", "carl@mail.com", "555", "Citizen", null, status);
+        User u = new User();
+        u.setUserId("USR-1");
+        u.setName("Carl Citizen");
+        u.setEmail("carl@mail.com");
+        u.setPhone("555");
+        u.setRole("CIT");
+        u.setStatus(status);
+        return u;
     }
 
     @Test

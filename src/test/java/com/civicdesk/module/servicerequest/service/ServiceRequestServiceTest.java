@@ -17,8 +17,8 @@ import com.civicdesk.module.serviceRequest.entity.enums.ServiceCategory;
 import com.civicdesk.module.serviceRequest.entity.enums.ServiceStatus;
 import com.civicdesk.module.serviceRequest.entity.enums.VerificationStatus;
 import com.civicdesk.module.serviceRequest.entity.external.CitizenProfile;
-import com.civicdesk.module.serviceRequest.entity.external.Department;
-import com.civicdesk.module.serviceRequest.entity.external.User;
+import com.civicdesk.module.iam.entity.Department;
+import com.civicdesk.module.iam.entity.User;
 import com.civicdesk.module.serviceRequest.repository.RequestDocumentRepository;
 import com.civicdesk.module.serviceRequest.repository.ServiceCatalogRepository;
 import com.civicdesk.module.serviceRequest.repository.ServiceRequestRepository;
@@ -68,12 +68,19 @@ class ServiceRequestServiceTest {
 
     @BeforeEach
     void setUp() {
-        department = new Department("DEP-1", "Revenue", "revenue@city.gov");
+        department = new Department("Revenue");
+        department.setDepartmentId("DEP-1");
 
         citizen = new CitizenProfile("CIT-1", "USR-1", "NID-1", "1 Main St", "W1", "Z1");
 
-        officer = new User("OFF-1", "Olivia Officer", "olivia@city.gov", "555-0100",
-                "Officer", "DEP-1", "A");
+        officer = new User();
+        officer.setUserId("OFF-1");
+        officer.setName("Olivia Officer");
+        officer.setEmail("olivia@city.gov");
+        officer.setPhone("555-0100");
+        officer.setRole("FO");
+        officer.setDepartmentId("DEP-1");
+        officer.setStatus("A");
 
         catalog = new ServiceCatalog();
         catalog.setServiceId("SVC-1");

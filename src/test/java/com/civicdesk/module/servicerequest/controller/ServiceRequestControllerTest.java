@@ -8,12 +8,14 @@ import com.civicdesk.module.serviceRequest.dto.response.ServiceDetailResponse;
 import com.civicdesk.module.serviceRequest.entity.enums.RequestStatus;
 import com.civicdesk.module.serviceRequest.entity.enums.ServiceCategory;
 import com.civicdesk.module.serviceRequest.entity.enums.ServiceStatus;
+import com.civicdesk.module.iam.security.JwtAuthFilter;
 import com.civicdesk.module.serviceRequest.service.DocumentService;
 import com.civicdesk.module.serviceRequest.service.ServiceCatalogService;
 import com.civicdesk.module.serviceRequest.service.ServiceRequestService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -41,6 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * mapping done by {@code GlobalExceptionHandler}. Services are mocked.
  */
 @WebMvcTest(ServiceRequestController.class)
+@AutoConfigureMockMvc(addFilters = false) // IAM security is on the classpath; disable filters for this slice.
 class ServiceRequestControllerTest {
 
     @Autowired private MockMvc mockMvc;
@@ -48,6 +51,8 @@ class ServiceRequestControllerTest {
     @MockitoBean private ServiceCatalogService serviceCatalogService;
     @MockitoBean private ServiceRequestService serviceRequestService;
     @MockitoBean private DocumentService documentService;
+    // IAM's SecurityConfig is pulled into the slice and needs this bean; mock it (filters disabled anyway).
+    @MockitoBean private JwtAuthFilter jwtAuthFilter;
 
     // ---------------------------------------------------------------- Catalog services
 
@@ -58,7 +63,7 @@ class ServiceRequestControllerTest {
                 "SVC-1", "Birth Certificate", "DEP-1", ServiceCategory.Certificate, 7,
                 List.of("NationalID"), new BigDecimal("50.00"), ServiceStatus.Active));
 
-        mockMvc.perform(get("/civicDesk/serviceRequest/getService/SVC-1"))
+        mockMvc.perform(get("/serviceRequest/getService/SVC-1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.serviceId").value("SVC-1"))
                 .andExpect(jsonPath("$.status").value("A"));
@@ -70,7 +75,7 @@ class ServiceRequestControllerTest {
         when(serviceCatalogService.getService("SVC-X"))
                 .thenThrow(new ResourceNotFoundException("Service not found."));
 
-        mockMvc.perform(get("/civicDesk/serviceRequest/getService/SVC-X"))
+        mockMvc.perform(get("/serviceRequest/getService/SVC-X"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Service not found."));
     }
@@ -87,7 +92,7 @@ class ServiceRequestControllerTest {
                  "requiredDocuments":["NationalID"],"fee":50.00}
                 """;
 
-        mockMvc.perform(post("/civicDesk/serviceRequest/createService")
+        mockMvc.perform(post("/serviceRequest/createService")
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.message").value("Service created successfully."));
@@ -101,7 +106,7 @@ class ServiceRequestControllerTest {
                 {"serviceName":"","departmentId":"DEP-1","category":"Certificate","processingDays":0}
                 """;
 
-        mockMvc.perform(post("/civicDesk/serviceRequest/createService")
+        mockMvc.perform(post("/serviceRequest/createService")
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isBadRequest());
     }
@@ -114,7 +119,7 @@ class ServiceRequestControllerTest {
         when(serviceRequestService.submitRequest(any()))
                 .thenReturn(new MessageResponse("Service request submitted successfully."));
 
-        mockMvc.perform(post("/civicDesk/serviceRequest/submitRequest")
+        mockMvc.perform(post("/serviceRequest/submitRequest")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"citizenId\":\"CIT-1\",\"serviceId\":\"SVC-1\"}"))
                 .andExpect(status().isCreated())
@@ -124,7 +129,7 @@ class ServiceRequestControllerTest {
     @Test
     @DisplayName("POST submitRequest returns 400 when required fields are missing")
     void submitRequestValidationFails() throws Exception {
-        mockMvc.perform(post("/civicDesk/serviceRequest/submitRequest")
+        mockMvc.perform(post("/serviceRequest/submitRequest")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"citizenId\":\"\",\"serviceId\":\"\"}"))
                 .andExpect(status().isBadRequest());
@@ -138,7 +143,7 @@ class ServiceRequestControllerTest {
                         "REQ-1", "Birth Certificate", "CIT-1", RequestStatus.Submitted,
                         "DEP-1", LocalDate.now())));
 
-        mockMvc.perform(get("/civicDesk/serviceRequest/getAllRequests")
+        mockMvc.perform(get("/serviceRequest/getAllRequests")
                         .param("status", "S").param("departmentId", "DEP-1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].requestId").value("REQ-1"))
@@ -153,7 +158,7 @@ class ServiceRequestControllerTest {
         when(serviceRequestService.updateRequestStatus(eq("REQ-1"), any()))
                 .thenReturn(new MessageResponse("Request status updated successfully."));
 
-        mockMvc.perform(put("/civicDesk/serviceRequest/updateRequestStatus/REQ-1")
+        mockMvc.perform(put("/serviceRequest/updateRequestStatus/REQ-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"newStatus\":\"U\"}"))
                 .andExpect(status().isOk());
@@ -165,7 +170,7 @@ class ServiceRequestControllerTest {
         when(serviceRequestService.updateRequestStatus(eq("REQ-1"), any()))
                 .thenThrow(new UnprocessableEntityException("Invalid status transition."));
 
-        mockMvc.perform(put("/civicDesk/serviceRequest/updateRequestStatus/REQ-1")
+        mockMvc.perform(put("/serviceRequest/updateRequestStatus/REQ-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"newStatus\":\"A\"}"))
                 .andExpect(status().isUnprocessableEntity())
@@ -182,7 +187,7 @@ class ServiceRequestControllerTest {
         when(documentService.uploadDocument(eq("REQ-1"), eq("NationalID"), any()))
                 .thenReturn(new MessageResponse("Document uploaded successfully."));
 
-        mockMvc.perform(multipart("/civicDesk/serviceRequest/uploadDocument/REQ-1")
+        mockMvc.perform(multipart("/serviceRequest/uploadDocument/REQ-1")
                         .file(file).param("documentType", "NationalID"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.message").value("Document uploaded successfully."));
@@ -194,7 +199,7 @@ class ServiceRequestControllerTest {
         when(documentService.verifyDocument(eq("DOC-1"), any()))
                 .thenReturn(new MessageResponse("Document verified successfully."));
 
-        mockMvc.perform(put("/civicDesk/serviceRequest/verifyDocument/DOC-1")
+        mockMvc.perform(put("/serviceRequest/verifyDocument/DOC-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"verificationStatus\":\"V\"}"))
                 .andExpect(status().isOk());

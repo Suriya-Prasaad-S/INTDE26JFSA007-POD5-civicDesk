@@ -1,10 +1,10 @@
 package com.civicdesk.module.serviceRequest.service;
 
 import com.civicdesk.common.exception.UnprocessableEntityException;
+import com.civicdesk.module.iam.entity.User;
+import com.civicdesk.module.iam.repository.UserRepository;
 import com.civicdesk.module.serviceRequest.entity.enums.RequestStatus;
-import com.civicdesk.module.serviceRequest.entity.external.User;
 import com.civicdesk.module.serviceRequest.repository.ServiceRequestRepository;
-import com.civicdesk.module.serviceRequest.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,7 +35,15 @@ class OfficerAssignmentTest {
     @InjectMocks private OfficerAssignment officerAssignment;
 
     private User officer(String id) {
-        return new User(id, "Officer " + id, id + "@city.gov", "555", "Officer", "DEP-1", "A");
+        User u = new User();
+        u.setUserId(id);
+        u.setName("Officer " + id);
+        u.setEmail(id + "@city.gov");
+        u.setPhone("555");
+        u.setRole("FO");
+        u.setDepartmentId("DEP-1");
+        u.setStatus("A");
+        return u;
     }
 
     @Test
@@ -43,7 +51,7 @@ class OfficerAssignmentTest {
     void selectsLeastLoaded() {
         User busy = officer("OFF-1");
         User idle = officer("OFF-2");
-        when(userRepository.findByRoleAndStatusAndDepartmentId("Officer", "A", "DEP-1"))
+        when(userRepository.findByRoleAndStatusAndDepartmentId("FO", "A", "DEP-1"))
                 .thenReturn(List.of(busy, idle));
         when(requestRepository.countByAssignedOfficerAndStatusNotIn(eq(busy), anyCollection()))
                 .thenReturn(5L);
@@ -61,7 +69,7 @@ class OfficerAssignmentTest {
         // Two officers so Stream.min actually invokes the comparator (and thus the count query).
         User first = officer("OFF-1");
         User second = officer("OFF-2");
-        when(userRepository.findByRoleAndStatusAndDepartmentId("Officer", "A", "DEP-1"))
+        when(userRepository.findByRoleAndStatusAndDepartmentId("FO", "A", "DEP-1"))
                 .thenReturn(List.of(first, second));
         when(requestRepository.countByAssignedOfficerAndStatusNotIn(any(User.class), anyCollection()))
                 .thenAnswer(invocation -> {
@@ -77,7 +85,7 @@ class OfficerAssignmentTest {
     @Test
     @DisplayName("throws when no active officer exists in the department")
     void noOfficerAvailable() {
-        when(userRepository.findByRoleAndStatusAndDepartmentId("Officer", "A", "DEP-1"))
+        when(userRepository.findByRoleAndStatusAndDepartmentId("FO", "A", "DEP-1"))
                 .thenReturn(List.of());
 
         assertThatThrownBy(() -> officerAssignment.findLeastLoadedOfficer("DEP-1"))

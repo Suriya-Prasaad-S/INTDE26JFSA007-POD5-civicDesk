@@ -2,18 +2,20 @@ package com.civicdesk.module.serviceRequest.service;
 
 import com.civicdesk.common.exception.ForbiddenException;
 import com.civicdesk.common.exception.ResourceNotFoundException;
+import com.civicdesk.module.iam.entity.User;
+import com.civicdesk.module.iam.enums.UserStatus;
+import com.civicdesk.module.iam.repository.UserRepository;
 import com.civicdesk.module.serviceRequest.entity.external.CitizenProfile;
-import com.civicdesk.module.serviceRequest.entity.external.User;
 import com.civicdesk.module.serviceRequest.repository.CitizenProfileRepository;
-import com.civicdesk.module.serviceRequest.repository.UserRepository;
 import org.springframework.stereotype.Component;
 
 /**
- * Read-only access to citizen data owned by the Citizen / IAM modules.
+ * Read-only access to citizen data, joining the Service Request module's
+ * {@code citizen_profile} to the IAM-owned {@code users} account.
  *
- * <p>Per the ER design a citizen's account status (Active / Flagged) lives on the
- * {@code users} row linked from {@code citizen_profile.userId}. Backed by JPA repositories
- * over the placeholder entities until those modules land.</p>
+ * <p>Per the ER design a citizen's account status (Active / Inactive / Suspended) lives on
+ * the {@code users} row linked from {@code citizen_profile.userId}. Only an Active ("A")
+ * account may submit requests.</p>
  */
 @Component
 public class CitizenLookup {
@@ -31,7 +33,7 @@ public class CitizenLookup {
      * Ensures the citizen exists and is allowed to submit requests, returning the profile.
      *
      * @throws ResourceNotFoundException if no citizen profile matches the id
-     * @throws ForbiddenException        if the citizen's linked account is Flagged
+     * @throws ForbiddenException        if the citizen's linked account is not Active
      */
     public CitizenProfile loadSubmittableCitizen(String citizenId) {
         CitizenProfile citizen = citizenProfileRepository.findById(citizenId)
@@ -42,10 +44,11 @@ public class CitizenLookup {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User account for citizen " + citizenId + " does not exist"));
 
-        // User status uses single-letter codes: "F" = Flagged (see DummyDataSeeder).
-        if ("F".equalsIgnoreCase(account.getStatus())) {
+        // Only an Active ("A") account may submit; Inactive/Suspended (or any flagged) accounts are blocked.
+        if (!UserStatus.ACT.getLabel().equalsIgnoreCase(account.getStatus())) {
             throw new ForbiddenException(
-                    "Your citizen profile is flagged. Please contact your ward office.");
+                    "Your citizen account is not active (it may be flagged or suspended). "
+                            + "Please contact your ward office.");
         }
         return citizen;
     }

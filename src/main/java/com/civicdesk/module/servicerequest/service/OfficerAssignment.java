@@ -1,10 +1,12 @@
 package com.civicdesk.module.serviceRequest.service;
 
 import com.civicdesk.common.exception.UnprocessableEntityException;
+import com.civicdesk.module.iam.entity.User;
+import com.civicdesk.module.iam.enums.Role;
+import com.civicdesk.module.iam.enums.UserStatus;
+import com.civicdesk.module.iam.repository.UserRepository;
 import com.civicdesk.module.serviceRequest.entity.enums.RequestStatus;
-import com.civicdesk.module.serviceRequest.entity.external.User;
 import com.civicdesk.module.serviceRequest.repository.ServiceRequestRepository;
-import com.civicdesk.module.serviceRequest.repository.UserRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -35,9 +37,9 @@ public class OfficerAssignment {
     }
 
     public User findLeastLoadedOfficer(String departmentId) {
-        // User status uses single-letter codes: "A" = Active (see DummyDataSeeder).
-        List<User> officers =
-                userRepository.findByRoleAndStatusAndDepartmentId("Officer", "A", departmentId);
+        // Officers are IAM users with role FO (Field Officer) and an Active ("A") status.
+        List<User> officers = userRepository.findByRoleAndStatusAndDepartmentId(
+                Role.FO.name(), UserStatus.ACT.getLabel(), departmentId);
 
         if (officers.isEmpty()) {
             throw new UnprocessableEntityException(

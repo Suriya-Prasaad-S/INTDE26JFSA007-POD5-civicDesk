@@ -8,7 +8,7 @@ import com.civicdesk.module.serviceRequest.entity.enums.ServiceCategory;
 import com.civicdesk.module.serviceRequest.entity.enums.ServiceStatus;
 import com.civicdesk.module.serviceRequest.entity.enums.VerificationStatus;
 import com.civicdesk.module.serviceRequest.entity.external.CitizenProfile;
-import com.civicdesk.module.serviceRequest.entity.external.Department;
+import com.civicdesk.module.iam.entity.Department;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,7 +35,9 @@ class RequestDocumentRepositoryTest {
 
     @BeforeEach
     void seed() {
-        Department dept = em.persist(new Department("DEP-A", "Revenue", "rev@city.gov"));
+        Department dept = new Department("Revenue");
+        dept.setDepartmentId("DEP-A");
+        dept = em.persist(dept);
         CitizenProfile citizen = em.persist(new CitizenProfile("CIT-A", "USR-A", "NID", "addr", "W", "Z"));
 
         ServiceCatalog catalog = new ServiceCatalog();

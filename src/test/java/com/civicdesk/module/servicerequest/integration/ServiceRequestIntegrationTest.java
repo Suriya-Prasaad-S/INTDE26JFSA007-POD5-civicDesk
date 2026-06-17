@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 @Transactional
 class ServiceRequestIntegrationTest {
 
@@ -34,7 +36,7 @@ class ServiceRequestIntegrationTest {
     @Test
     @DisplayName("getAllServices returns only the Active seeded services")
     void getAllServicesReturnsActiveOnly() throws Exception {
-        mockMvc.perform(get("/civicDesk/serviceRequest/getAllServices"))
+        mockMvc.perform(get("/serviceRequest/getAllServices"))
                 .andExpect(status().isOk())
                 // svc-0001 and svc-0002 are Active; svc-0003 is Inactive and must be excluded.
                 .andExpect(jsonPath("$.length()").value(2));
@@ -45,7 +47,7 @@ class ServiceRequestIntegrationTest {
     void submitRequestSucceeds() throws Exception {
         long before = requestRepository.count();
 
-        mockMvc.perform(post("/civicDesk/serviceRequest/submitRequest")
+        mockMvc.perform(post("/serviceRequest/submitRequest")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"citizenId\":\"citizen-0001\",\"serviceId\":\"svc-0001\"}"))
                 .andExpect(status().isCreated())
@@ -57,7 +59,7 @@ class ServiceRequestIntegrationTest {
     @Test
     @DisplayName("submitRequest by a Flagged citizen is forbidden (403)")
     void submitRequestFlaggedCitizenForbidden() throws Exception {
-        mockMvc.perform(post("/civicDesk/serviceRequest/submitRequest")
+        mockMvc.perform(post("/serviceRequest/submitRequest")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"citizenId\":\"citizen-0002\",\"serviceId\":\"svc-0001\"}"))
                 .andExpect(status().isForbidden());
@@ -66,7 +68,7 @@ class ServiceRequestIntegrationTest {
     @Test
     @DisplayName("submitRequest against an Inactive service is unprocessable (422)")
     void submitRequestInactiveServiceUnprocessable() throws Exception {
-        mockMvc.perform(post("/civicDesk/serviceRequest/submitRequest")
+        mockMvc.perform(post("/serviceRequest/submitRequest")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"citizenId\":\"citizen-0001\",\"serviceId\":\"svc-0003\"}"))
                 .andExpect(status().isUnprocessableEntity());
@@ -75,7 +77,7 @@ class ServiceRequestIntegrationTest {
     @Test
     @DisplayName("submitRequest for an unknown service returns 404")
     void submitRequestUnknownServiceNotFound() throws Exception {
-        mockMvc.perform(post("/civicDesk/serviceRequest/submitRequest")
+        mockMvc.perform(post("/serviceRequest/submitRequest")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"citizenId\":\"citizen-0001\",\"serviceId\":\"does-not-exist\"}"))
                 .andExpect(status().isNotFound());

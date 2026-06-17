@@ -15,7 +15,7 @@ import com.civicdesk.module.serviceRequest.entity.ServiceRequest;
 import com.civicdesk.module.serviceRequest.entity.enums.RequestStatus;
 import com.civicdesk.module.serviceRequest.entity.enums.ServiceStatus;
 import com.civicdesk.module.serviceRequest.entity.external.CitizenProfile;
-import com.civicdesk.module.serviceRequest.entity.external.User;
+import com.civicdesk.module.iam.entity.User;
 import com.civicdesk.module.serviceRequest.repository.RequestDocumentRepository;
 import com.civicdesk.module.serviceRequest.repository.ServiceCatalogRepository;
 import com.civicdesk.module.serviceRequest.repository.ServiceRequestRepository;
