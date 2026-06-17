@@ -1,9 +1,8 @@
 package com.civicdesk.module.citizen.controller;
 
+import com.civicdesk.common.exception.citizen.InvalidRequestException;
+import com.civicdesk.common.response.ApiResponse;
 import com.civicdesk.module.citizen.dto.request.VerifyDocumentRequest;
-import com.civicdesk.module.citizen.dto.response.DocumentDetailResponse;
-import com.civicdesk.module.citizen.dto.response.DocumentSummaryResponse;
-import com.civicdesk.module.citizen.exception.InvalidRequestException;
 import com.civicdesk.module.citizen.service.DocumentService;
 import com.civicdesk.module.citizen.support.FileStorageService;
 import com.civicdesk.module.citizen.support.IdGenerator;
@@ -26,9 +25,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Citizen document endpoints under base path {@code /citizenProfile} (served below the
@@ -37,8 +33,8 @@ import java.util.Map;
  * <p>{@code uploadDocument} accepts a real {@code multipart/form-data} file: the bytes are written to
  * disk by {@link FileStorageService} under a generated name, {@code filePath} is set to the
  * retrieval URL, and the bytes are served back by {@link #downloadFile}. {@code status} values on the
- * API are single-character codes (V/E/R). The internal "issue dummy document" path has been removed
- * (it belonged to Module 2.3).
+ * API are single-character codes (V/E/R). JSON responses use the shared {@link ApiResponse}
+ * envelope; {@link #downloadFile} streams raw bytes and so is exempt.
  */
 @RestController
 @RequestMapping("/citizenProfile")
@@ -61,13 +57,14 @@ public class DocumentController {
     }
 
     /**
-     * #5 — POST /{citizenId}/uploadDocument (multipart/form-data). Form parts: {@code file} (the
+     * POST /{citizenId}/uploadDocument (multipart/form-data). Form parts: {@code file} (the
      * upload) and {@code documentType}. The file is stored on disk; size/type/limit rules are
      * enforced by the service (and the stored file is rolled back if the service rejects it).
+     * {@code citizenId} is the owning citizen's userId.
      */
     @PostMapping(value = "/{citizenId}/uploadDocument", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('CIT')")
-    public ResponseEntity<Map<String, Object>> uploadDocument(
+    public ResponseEntity<ApiResponse> uploadDocument(
             @PathVariable String citizenId,
             @RequestParam("documentType") String documentType,
             @RequestParam("file") MultipartFile file) {
@@ -89,46 +86,42 @@ public class DocumentController {
                     file.getContentType(),
                     file.getSize(),
                     storedFilePath);
-            Map<String, Object> body = new LinkedHashMap<>();
-            body.put("message", "Document uploaded successfully");
-            body.put("documentId", documentId);
-            return ResponseEntity.status(201).body(body);
+            return ResponseEntity.status(201)
+                    .body(ApiResponse.of("Document uploaded successfully", documentId));
         } catch (RuntimeException ex) {
             fileStorage.deleteQuietly(storedName); // roll back the stored file on validation/persist failure
             throw ex;
         }
     }
 
-    /** #6 — GET /{citizenId}/getAllDocuments. 404 if the citizen does not exist. */
+    /** GET /{citizenId}/getAllDocuments. 404 if the citizen does not exist. */
     @GetMapping("/{citizenId}/getAllDocuments")
     @PreAuthorize("hasRole('CIT')")
-    public ResponseEntity<List<DocumentSummaryResponse>> getAllDocuments(@PathVariable String citizenId) {
-        return ResponseEntity.ok(documentService.getAllDocuments(citizenId));
+    public ResponseEntity<ApiResponse> getAllDocuments(@PathVariable String citizenId) {
+        return ResponseEntity.ok(ApiResponse.data(documentService.getAllDocuments(citizenId)));
     }
 
-    /** #7 — GET /{citizenId}/getDocumentById/{documentId}. Scoped to the owning citizen. */
+    /** GET /{citizenId}/getDocumentById/{documentId}. Scoped to the owning citizen. */
     @GetMapping("/{citizenId}/getDocumentById/{documentId}")
     @PreAuthorize("hasRole('CIT')")
-    public ResponseEntity<DocumentDetailResponse> getDocumentById(
+    public ResponseEntity<ApiResponse> getDocumentById(
             @PathVariable String citizenId,
             @PathVariable String documentId) {
-        return ResponseEntity.ok(documentService.getDocumentById(citizenId, documentId));
+        return ResponseEntity.ok(ApiResponse.data(documentService.getDocumentById(citizenId, documentId)));
     }
 
     /**
-     * #8 — PUT /{citizenId}/verifyDocument/{documentId}. The verifier ({@code verifiedBy}) must be an
-     * Active Department Supervisor (403 otherwise); applies the manual status transition.
+     * PUT /{citizenId}/verifyDocument/{documentId}. An officer ({@code FO}/{@code DS}/{@code ADM})
+     * applies the manual status transition; the verifier's identity is taken from the JWT.
      */
     @PutMapping("/{citizenId}/verifyDocument/{documentId}")
     @PreAuthorize("hasAnyRole('FO','DS','ADM')")
-    public ResponseEntity<Map<String, Object>> verifyDocument(
+    public ResponseEntity<ApiResponse> verifyDocument(
             @PathVariable String citizenId,
             @PathVariable String documentId,
             @Valid @RequestBody VerifyDocumentRequest request) {
         documentService.verifyDocument(citizenId, documentId, request);
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("message", "Document verified successfully");
-        return ResponseEntity.ok(body);
+        return ResponseEntity.ok(ApiResponse.of("Document verified successfully", null));
     }
 
     /** GET /files/{filename} — streams a stored document's bytes (used by {@code filePath}). */

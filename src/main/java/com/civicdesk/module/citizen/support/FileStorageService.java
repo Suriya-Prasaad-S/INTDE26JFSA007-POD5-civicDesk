@@ -1,7 +1,7 @@
 package com.civicdesk.module.citizen.support;
 
-import com.civicdesk.module.citizen.exception.InvalidRequestException;
-import com.civicdesk.module.citizen.exception.ResourceNotFoundException;
+import com.civicdesk.common.exception.citizen.InvalidRequestException;
+import com.civicdesk.common.exception.citizen.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;

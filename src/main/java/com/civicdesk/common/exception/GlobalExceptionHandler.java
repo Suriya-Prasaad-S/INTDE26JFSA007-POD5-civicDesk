@@ -5,13 +5,21 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
+import com.civicdesk.common.exception.citizen.BusinessRuleException;
+import com.civicdesk.common.exception.citizen.DuplicateResourceException;
+import com.civicdesk.common.exception.citizen.ForbiddenActionException;
+import com.civicdesk.common.exception.citizen.InvalidRequestException;
 import com.civicdesk.common.exception.grievance.ActionNotEditableException;
 import com.civicdesk.common.exception.grievance.ActionNotFoundException;
 import com.civicdesk.common.exception.grievance.GrievanceActionCreationException;
@@ -28,9 +36,9 @@ import com.civicdesk.common.response.ErrorResponse;
  * Central exception handler. Every controller in the application routes its
  * failures through here so that clients always receive a consistent error body.
  *
- * <p>Grievance-module failures are returned as {@link ErrorResponse}; IAM-module
- * failures are returned as {@link ApiResponse}. Unifying these two error shapes
- * is a follow-up the team should align on.
+ * <p>Grievance- and citizen-module failures are returned as {@link ErrorResponse};
+ * IAM-module failures are returned as {@link ApiResponse}. Unifying these two error
+ * shapes is a follow-up the team should align on.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -77,6 +85,55 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleActionNotFound(
             ActionNotFoundException ex, WebRequest request) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
+    // --- Citizen module (returns ErrorResponse, same shape as grievance) ---
+
+    // FQN on the type: this package already has an (IAM) ResourceNotFoundException, so the citizen
+    // one is referenced fully-qualified to avoid the name clash.
+    @ExceptionHandler(com.civicdesk.common.exception.citizen.ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleCitizenNotFound(
+            com.civicdesk.common.exception.citizen.ResourceNotFoundException ex, WebRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler({DuplicateResourceException.class, BusinessRuleException.class})
+    public ResponseEntity<ErrorResponse> handleCitizenConflict(
+            RuntimeException ex, WebRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(ForbiddenActionException.class)
+    public ResponseEntity<ErrorResponse> handleForbiddenAction(
+            ForbiddenActionException ex, WebRequest request) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidRequestException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRequest(
+            InvalidRequestException ex, WebRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
+    // --- Request/multipart failures (used by the citizen document upload) ---
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleTooLarge(
+            MaxUploadSizeExceededException ex, WebRequest request) {
+        return build(HttpStatus.PAYLOAD_TOO_LARGE, "Uploaded file is too large", request);
+    }
+
+    @ExceptionHandler({MissingServletRequestPartException.class,
+            MissingServletRequestParameterException.class})
+    public ResponseEntity<ErrorResponse> handleMissingPartOrParam(
+            Exception ex, WebRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadable(
+            HttpMessageNotReadableException ex, WebRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Malformed request body", request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
