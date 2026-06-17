@@ -136,6 +136,10 @@ public class CitizenService {
     /**
      * Verifies (or flags) a citizen. {@code status} must be {@code V} or {@code F}; the transition
      * must be allowed (409 otherwise). Stamps the verifying officer and timestamp.
+     *
+     * <p>KNOWN LIMITATION (revisit later): a {@code Flagged} citizen cannot be reactivated through
+     * this endpoint — {@code A} (Active) is rejected as a verify target, so {@code F -> A} has no
+     * path here. Reactivating a flagged citizen would need a separate "reactivate" operation.
      */
     @Transactional
     public void verifyCitizen(String citizenUserId, VerifyCitizenRequest request) {
