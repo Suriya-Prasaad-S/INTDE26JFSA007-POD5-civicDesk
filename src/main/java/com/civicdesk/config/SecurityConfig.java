@@ -34,21 +34,25 @@ public class SecurityConfig {
                         .requestMatchers("/iam/auth/citizen/login").permitAll()
                         .requestMatchers("/iam/auth/staff/login").permitAll()
                         .requestMatchers("/iam/auth/setPassword").permitAll()
-                        // Service Request module — left open for now (authentication is
-                        // owned by IAM; role enforcement on these endpoints is a follow-up).
-                        .requestMatchers("/serviceRequest/**").permitAll()
                         // Swagger / OpenAPI UI
                         .requestMatchers(
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs",
                                 "/v3/api-docs/**").permitAll()
+                        // Everything else — including all /serviceRequest/** endpoints — requires a
+                        // valid JWT. Per-endpoint role / ownership rules for Service Request are
+                        // enforced by ServiceRequestAccessGuard (403); IAM endpoints use @PreAuthorize.
                         .anyRequest().authenticated()
                 )
-                // Return a clean 401 (not the servlet default) when no/invalid token is present.
+                // Return a clean JSON 401 (not the servlet default) when no/invalid token is present.
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(
-                        (request, response, authException) ->
-                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
+                        (request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write(
+                                    "{\"message\":\"Unauthorized. JWT token is missing or invalid.\"}");
+                        }))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

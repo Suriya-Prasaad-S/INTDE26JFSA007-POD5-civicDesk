@@ -9,6 +9,7 @@ import com.civicdesk.module.serviceRequest.entity.enums.RequestStatus;
 import com.civicdesk.module.serviceRequest.entity.enums.ServiceCategory;
 import com.civicdesk.module.serviceRequest.entity.enums.ServiceStatus;
 import com.civicdesk.module.iam.security.JwtAuthFilter;
+import com.civicdesk.module.serviceRequest.security.ServiceRequestAccessGuard;
 import com.civicdesk.module.serviceRequest.service.DocumentService;
 import com.civicdesk.module.serviceRequest.service.ServiceCatalogService;
 import com.civicdesk.module.serviceRequest.service.ServiceRequestService;
@@ -53,6 +54,9 @@ class ServiceRequestControllerTest {
     @MockitoBean private DocumentService documentService;
     // IAM's SecurityConfig is pulled into the slice and needs this bean; mock it (filters disabled anyway).
     @MockitoBean private JwtAuthFilter jwtAuthFilter;
+    // Authorization is verified end-to-end in the integration test; here the guard is a permissive
+    // mock (its void checks do nothing) so these web-layer tests stay focused on request/response wiring.
+    @MockitoBean private ServiceRequestAccessGuard accessGuard;
 
     // ---------------------------------------------------------------- Catalog services
 

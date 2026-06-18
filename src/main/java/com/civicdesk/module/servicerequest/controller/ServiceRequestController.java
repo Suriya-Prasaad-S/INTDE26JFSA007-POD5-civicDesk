@@ -14,6 +14,7 @@ import com.civicdesk.module.serviceRequest.dto.response.ServiceDetailResponse;
 import com.civicdesk.module.serviceRequest.dto.response.ServiceListItemResponse;
 import com.civicdesk.module.serviceRequest.entity.enums.RequestStatus;
 import com.civicdesk.module.serviceRequest.entity.enums.ServiceCategory;
+import com.civicdesk.module.serviceRequest.security.ServiceRequestAccessGuard;
 import com.civicdesk.module.serviceRequest.service.DocumentService;
 import com.civicdesk.module.serviceRequest.service.ServiceCatalogService;
 import com.civicdesk.module.serviceRequest.service.ServiceRequestService;
@@ -40,10 +41,10 @@ import java.util.List;
  * service requests, and documents. Mapped at {@code /serviceRequest}; with the application's
  * {@code /civicDesk} context-path the external paths are {@code /civicDesk/serviceRequest/**}.
  *
- * <p>Authentication is owned by the IAM module. These endpoints are currently permitted in
- * {@code SecurityConfig} (role-based authorization on them is a follow-up). Business-rule and
- * data checks (not found, invalid transition, inactive service, bad file type, etc.) are
- * enforced here and now.</p>
+ * <p>Authentication is owned by the IAM module: every endpoint requires a valid JWT (missing
+ * or invalid → 401). Per-endpoint role and "own resource only" rules are enforced by
+ * {@link ServiceRequestAccessGuard} (→ 403). Business-rule and data checks (not found, invalid
+ * transition, inactive service, bad file type, etc.) are enforced in the service layer.</p>
  */
 @RestController
 @RequestMapping("/serviceRequest")
@@ -55,6 +56,8 @@ public class ServiceRequestController {
     private ServiceRequestService serviceRequestService;
     @Autowired
     private DocumentService documentService;
+    @Autowired
+    private ServiceRequestAccessGuard accessGuard;
 
     // ---------------------------------------------------------------- Catalog services
 
@@ -74,6 +77,7 @@ public class ServiceRequestController {
     /** Create a new service in the catalog (Admin only - role check deferred). */
     @PostMapping("/createService")
     public ResponseEntity<MessageResponse> createService(@Valid @RequestBody CreateServiceRequest request) {
+        accessGuard.canCreateService();
         MessageResponse response = serviceCatalogService.createService(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -82,6 +86,7 @@ public class ServiceRequestController {
     @PutMapping("/updateService/{serviceId}")
     public ResponseEntity<MessageResponse> updateService(@PathVariable String serviceId,
                                                          @Valid @RequestBody UpdateServiceRequest request) {
+        accessGuard.canUpdateService();
         return ResponseEntity.ok(serviceCatalogService.updateService(serviceId, request));
     }
 
@@ -90,6 +95,7 @@ public class ServiceRequestController {
     /** Submit a new service request (Citizen). */
     @PostMapping("/submitRequest")
     public ResponseEntity<MessageResponse> submitRequest(@Valid @RequestBody SubmitServiceRequest request) {
+        accessGuard.canSubmitRequest();
         MessageResponse response = serviceRequestService.submitRequest(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -99,12 +105,14 @@ public class ServiceRequestController {
     public ResponseEntity<List<RequestListItemResponse>> getAllRequests(
             @RequestParam(value = "status", required = false) RequestStatus status,
             @RequestParam(value = "departmentId", required = false) String departmentId) {
+        accessGuard.canViewRequestQueue();
         return ResponseEntity.ok(serviceRequestService.getAllRequests(status, departmentId));
     }
 
     /** Full details of a single request, including its uploaded documents. */
     @GetMapping("/getRequest/{requestId}")
     public ResponseEntity<RequestDetailResponse> getRequest(@PathVariable String requestId) {
+        accessGuard.canViewRequest(requestId);
         return ResponseEntity.ok(serviceRequestService.getRequest(requestId));
     }
 
@@ -112,6 +120,7 @@ public class ServiceRequestController {
     @GetMapping("/getRequestsByCitizen/{citizenId}")
     public ResponseEntity<List<CitizenRequestItemResponse>> getRequestsByCitizen(
             @PathVariable String citizenId) {
+        accessGuard.canViewCitizenRequests(citizenId);
         return ResponseEntity.ok(serviceRequestService.getRequestsByCitizen(citizenId));
     }
 
@@ -120,6 +129,7 @@ public class ServiceRequestController {
     public ResponseEntity<MessageResponse> updateRequestStatus(
             @PathVariable String requestId,
             @Valid @RequestBody UpdateRequestStatusRequest request) {
+        accessGuard.canUpdateRequestStatus();
         return ResponseEntity.ok(serviceRequestService.updateRequestStatus(requestId, request));
     }
 
@@ -130,6 +140,7 @@ public class ServiceRequestController {
     public ResponseEntity<MessageResponse> uploadDocument(@PathVariable String requestId,
                                                           @RequestParam("documentType") String documentType,
                                                           @RequestParam("file") MultipartFile file) {
+        accessGuard.canUploadDocument(requestId);
         MessageResponse response = documentService.uploadDocument(requestId, documentType, file);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -137,6 +148,7 @@ public class ServiceRequestController {
     /** List all documents uploaded for a request with their verification statuses. */
     @GetMapping("/getDocuments/{requestId}")
     public ResponseEntity<List<DocumentItemResponse>> getDocuments(@PathVariable String requestId) {
+        accessGuard.canViewDocuments(requestId);
         return ResponseEntity.ok(documentService.getDocuments(requestId));
     }
 
@@ -144,6 +156,7 @@ public class ServiceRequestController {
     @PutMapping("/verifyDocument/{docId}")
     public ResponseEntity<MessageResponse> verifyDocument(@PathVariable String docId,
                                                           @RequestBody VerifyDocumentRequest request) {
+        accessGuard.canVerifyDocument();
         return ResponseEntity.ok(documentService.verifyDocument(docId, request));
     }
 }
