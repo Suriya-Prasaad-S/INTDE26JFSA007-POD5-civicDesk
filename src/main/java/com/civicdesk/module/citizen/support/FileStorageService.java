@@ -65,6 +65,12 @@ public class FileStorageService {
         }
     }
 
+    /** Whether a readable file with this name exists in the storage directory. */
+    public boolean exists(String storedName) {
+        Path file = root.resolve(storedName).normalize();
+        return file.startsWith(root) && Files.isReadable(file);
+    }
+
     /** Best-effort delete — used to roll back a stored file when the service rejects the upload. */
     public void deleteQuietly(String storedName) {
         try {

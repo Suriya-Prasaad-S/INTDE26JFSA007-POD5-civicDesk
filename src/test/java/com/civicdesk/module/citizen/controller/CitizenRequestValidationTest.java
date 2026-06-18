@@ -2,7 +2,7 @@ package com.civicdesk.module.citizen.controller;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -15,11 +15,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 
 import com.civicdesk.module.citizen.service.CitizenService;
+import com.civicdesk.module.citizen.support.FileStorageService;
 import com.civicdesk.module.iam.security.JwtAuthFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -39,10 +42,16 @@ class CitizenRequestValidationTest {
     @MockitoBean
     private CitizenService citizenService;
     @MockitoBean
+    private FileStorageService fileStorage;
+    @MockitoBean
     private JwtAuthFilter jwtAuthFilter;
 
-    private Map<String, Object> validComplete() {
-        Map<String, Object> m = new HashMap<>();
+    private Map<String, String> validRegister() {
+        Map<String, String> m = new HashMap<>();
+        m.put("name", "Ravi Kumar");
+        m.put("email", "ravi@example.com");
+        m.put("password", "Ravi@1234");
+        m.put("phone", "9876543210");
         m.put("dateOfBirth", "1990-01-01");
         m.put("gender", "Male");
         m.put("nationalIdNumber", "IND1234567890");
@@ -52,95 +61,86 @@ class CitizenRequestValidationTest {
         return m;
     }
 
-    private void expectCompleteBadRequest(Map<String, Object> body, String messageFragment) throws Exception {
-        mockMvc.perform(post("/citizenProfile/me")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(body)))
+    private void expectRegisterBadRequest(Map<String, String> params, String messageFragment) throws Exception {
+        MockMultipartHttpServletRequestBuilder builder = multipart("/citizenProfile/register")
+                .file(new MockMultipartFile("proof", "proof.pdf", "application/pdf", "b".getBytes()));
+        params.forEach(builder::param);
+        mockMvc.perform(builder)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", containsString(messageFragment)));
         verifyNoInteractions(citizenService);
     }
 
-    // --- completeProfile (POST /citizenProfile/me) ---
+    // --- register (POST /citizenProfile/register, multipart) ---
 
     @Test
-    @WithMockUser(username = "cit-1", roles = "CIT")
-    void complete_missingDateOfBirth_returns400() throws Exception {
-        Map<String, Object> body = validComplete();
+    void register_blankName_returns400() throws Exception {
+        Map<String, String> body = validRegister();
+        body.put("name", "");
+        expectRegisterBadRequest(body, "name is required");
+    }
+
+    @Test
+    void register_malformedEmail_returns400() throws Exception {
+        Map<String, String> body = validRegister();
+        body.put("email", "nope");
+        expectRegisterBadRequest(body, "email must be a valid email address");
+    }
+
+    @Test
+    void register_shortPassword_returns400() throws Exception {
+        Map<String, String> body = validRegister();
+        body.put("password", "short");
+        expectRegisterBadRequest(body, "password must be between 8 and 72 characters");
+    }
+
+    @Test
+    void register_invalidPhone_returns400() throws Exception {
+        Map<String, String> body = validRegister();
+        body.put("phone", "12345");
+        expectRegisterBadRequest(body, "phone must be a valid 10-digit Indian mobile number");
+    }
+
+    @Test
+    void register_missingDateOfBirth_returns400() throws Exception {
+        Map<String, String> body = validRegister();
         body.remove("dateOfBirth");
-        expectCompleteBadRequest(body, "dateOfBirth is required");
+        expectRegisterBadRequest(body, "dateOfBirth is required");
     }
 
     @Test
-    @WithMockUser(username = "cit-1", roles = "CIT")
-    void complete_futureDateOfBirth_returns400() throws Exception {
-        Map<String, Object> body = validComplete();
+    void register_futureDateOfBirth_returns400() throws Exception {
+        Map<String, String> body = validRegister();
         body.put("dateOfBirth", "2999-01-01");
-        expectCompleteBadRequest(body, "dateOfBirth must be a date in the past");
+        expectRegisterBadRequest(body, "dateOfBirth must be a date in the past");
     }
 
     @Test
-    @WithMockUser(username = "cit-1", roles = "CIT")
-    void complete_blankGender_returns400() throws Exception {
-        Map<String, Object> body = validComplete();
-        body.put("gender", "");
-        expectCompleteBadRequest(body, "gender is required");
-    }
-
-    @Test
-    @WithMockUser(username = "cit-1", roles = "CIT")
-    void complete_invalidGenderPattern_returns400() throws Exception {
-        Map<String, Object> body = validComplete();
+    void register_invalidGenderPattern_returns400() throws Exception {
+        Map<String, String> body = validRegister();
         body.put("gender", "Martian");
-        expectCompleteBadRequest(body, "gender must be Male, Female or Other");
+        expectRegisterBadRequest(body, "gender must be Male, Female or Other");
     }
 
     @Test
-    @WithMockUser(username = "cit-1", roles = "CIT")
-    void complete_blankNationalId_returns400() throws Exception {
-        Map<String, Object> body = validComplete();
-        body.put("nationalIdNumber", "");
-        expectCompleteBadRequest(body, "nationalIdNumber is required");
+    void register_invalidNationalIdPattern_returns400() throws Exception {
+        Map<String, String> body = validRegister();
+        body.put("nationalIdNumber", "ab$");
+        expectRegisterBadRequest(body, "nationalIdNumber must be 6-20 alphanumeric characters");
     }
 
     @Test
-    @WithMockUser(username = "cit-1", roles = "CIT")
-    void complete_invalidNationalIdPattern_returns400() throws Exception {
-        Map<String, Object> body = validComplete();
-        body.put("nationalIdNumber", "ab$"); // too short + illegal char
-        expectCompleteBadRequest(body, "nationalIdNumber must be 6-20 alphanumeric characters");
-    }
-
-    @Test
-    @WithMockUser(username = "cit-1", roles = "CIT")
-    void complete_blankAddress_returns400() throws Exception {
-        Map<String, Object> body = validComplete();
+    void register_blankAddress_returns400() throws Exception {
+        Map<String, String> body = validRegister();
         body.put("address", "");
-        expectCompleteBadRequest(body, "address is required");
+        expectRegisterBadRequest(body, "address is required");
     }
 
     @Test
-    @WithMockUser(username = "cit-1", roles = "CIT")
-    void complete_oversizeAddress_returns400() throws Exception {
-        Map<String, Object> body = validComplete();
-        body.put("address", "x".repeat(256));
-        expectCompleteBadRequest(body, "address must not exceed 255 characters");
-    }
-
-    @Test
-    @WithMockUser(username = "cit-1", roles = "CIT")
-    void complete_blankWard_returns400() throws Exception {
-        Map<String, Object> body = validComplete();
+    void register_blankWard_returns400() throws Exception {
+        Map<String, String> body = validRegister();
         body.put("ward", "");
-        expectCompleteBadRequest(body, "ward is required");
-    }
-
-    @Test
-    @WithMockUser(username = "cit-1", roles = "CIT")
-    void complete_oversizeZone_returns400() throws Exception {
-        Map<String, Object> body = validComplete();
-        body.put("zone", "x".repeat(51));
-        expectCompleteBadRequest(body, "zone must not exceed 50 characters");
+        expectRegisterBadRequest(body, "ward is required");
     }
 
     // --- updateMyProfile (PUT /citizenProfile/me) ---

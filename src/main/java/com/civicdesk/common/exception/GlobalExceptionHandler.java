@@ -1,11 +1,13 @@
 package com.civicdesk.common.exception;
 
 import java.util.Comparator;
+import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -122,16 +124,16 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.BAD_REQUEST, "Malformed request body");
     }
 
+    // @RequestBody validation (JSON bodies).
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse> handleValidation(MethodArgumentNotValidException ex) {
-        // Return only the FIRST field error. Presence constraints (@NotBlank/@NotNull/@NotEmpty)
-        // rank ahead of format constraints so a blank field reports "x is required" rather than a
-        // format message when one field trips several validators.
-        String message = ex.getBindingResult().getFieldErrors().stream()
-                .min(Comparator.comparingInt(GlobalExceptionHandler::constraintRank))
-                .map(FieldError::getDefaultMessage)
-                .orElse("Validation failed for the submitted request");
-        return error(HttpStatus.BAD_REQUEST, message);
+        return firstFieldError(ex.getBindingResult().getFieldErrors());
+    }
+
+    // @ModelAttribute validation (multipart/form-data binding, e.g. citizen registration).
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ApiResponse> handleBind(BindException ex) {
+        return firstFieldError(ex.getFieldErrors());
     }
 
     /** Catch-all so that no unexpected error ever leaks a raw stack trace to the client. */
@@ -201,6 +203,17 @@ public class GlobalExceptionHandler {
 
     private static ResponseEntity<ApiResponse> error(HttpStatus status, String message) {
         return ResponseEntity.status(status).body(ApiResponse.error(message));
+    }
+
+    // Return only the FIRST field error. Presence constraints (@NotBlank/@NotNull/@NotEmpty) rank
+    // ahead of format constraints so a blank field reports "x is required" rather than a format
+    // message when one field trips several validators.
+    private static ResponseEntity<ApiResponse> firstFieldError(List<FieldError> fieldErrors) {
+        String message = fieldErrors.stream()
+                .min(Comparator.comparingInt(GlobalExceptionHandler::constraintRank))
+                .map(FieldError::getDefaultMessage)
+                .orElse("Validation failed for the submitted request");
+        return error(HttpStatus.BAD_REQUEST, message);
     }
 
     /** Presence constraints rank first (0) so "x is required" wins over format messages (1). */

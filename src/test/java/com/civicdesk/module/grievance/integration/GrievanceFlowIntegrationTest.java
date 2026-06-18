@@ -1,6 +1,9 @@
 package com.civicdesk.module.grievance.integration;
 
 import com.civicdesk.common.util.JwtUtil;
+import com.civicdesk.module.citizen.entity.CitizenProfile;
+import com.civicdesk.module.citizen.entity.enums.CitizenStatus;
+import com.civicdesk.module.citizen.repository.CitizenProfileRepository;
 import com.civicdesk.module.iam.entity.Department;
 import com.civicdesk.module.iam.entity.User;
 import com.civicdesk.module.iam.enums.Role;
@@ -50,6 +53,8 @@ class GrievanceFlowIntegrationTest {
     private UserRepository userRepository;
     @Autowired
     private DepartmentRepository departmentRepository;
+    @Autowired
+    private CitizenProfileRepository citizenProfileRepository;
 
     private String citizenToken;
     private String supervisorToken;
@@ -70,8 +75,14 @@ class GrievanceFlowIntegrationTest {
         User fieldOfficer = saveUser(Role.FO.name(), dept.getDepartmentId());
         fieldOfficerId = fieldOfficer.getUserId();
 
-        // The citizen has no DB row — only a JWT identity.
-        citizenToken = jwtUtil.generateToken(UUID.randomUUID().toString(), Role.CIT.name());
+        // The citizen needs a Verified CitizenProfile to pass the verification gate before using
+        // any grievance service.
+        String citizenId = UUID.randomUUID().toString();
+        CitizenProfile citizen = new CitizenProfile();
+        citizen.setUserId(citizenId);
+        citizen.setStatus(CitizenStatus.Verified);
+        citizenProfileRepository.save(citizen);
+        citizenToken = jwtUtil.generateToken(citizenId, Role.CIT.name());
         supervisorToken = jwtUtil.generateToken(supervisor.getUserId(), Role.DS.name());
         fieldOfficerToken = jwtUtil.generateToken(fieldOfficer.getUserId(), Role.FO.name());
     }

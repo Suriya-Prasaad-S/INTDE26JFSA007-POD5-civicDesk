@@ -5,8 +5,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -19,7 +20,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -28,6 +32,7 @@ import com.civicdesk.module.citizen.dto.request.VerifyCitizenRequest;
 import com.civicdesk.module.citizen.dto.response.CitizenProfileResponse;
 import com.civicdesk.module.citizen.dto.response.CitizenSummaryResponse;
 import com.civicdesk.module.citizen.service.CitizenService;
+import com.civicdesk.module.citizen.support.FileStorageService;
 import com.civicdesk.module.iam.security.JwtAuthFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -49,7 +54,32 @@ class CitizenControllerTest {
     @MockitoBean
     private CitizenService citizenService;
     @MockitoBean
+    private FileStorageService fileStorage;
+    @MockitoBean
     private JwtAuthFilter jwtAuthFilter;
+
+    @Test
+    void register_returns201_withMessage() throws Exception {
+        MockMultipartFile proof = new MockMultipartFile(
+                "proof", "proof.pdf", "application/pdf", "proof-bytes".getBytes());
+
+        mockMvc.perform(multipart("/citizenProfile/register")
+                        .file(proof)
+                        .param("name", "Ravi Kumar")
+                        .param("email", "ravi@example.com")
+                        .param("password", "Ravi@1234")
+                        .param("phone", "9876543210")
+                        .param("dateOfBirth", "1990-01-01")
+                        .param("gender", "Male")
+                        .param("nationalIdNumber", "IND1234567890")
+                        .param("address", "12 Main St")
+                        .param("ward", "Ward 12")
+                        .param("zone", "Zone A"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.message").value("Citizen registered successfully"));
+
+        verify(citizenService).registerCitizen(any(), any(), any());
+    }
 
     @Test
     @WithMockUser(username = "cit-1", roles = "CIT")
@@ -61,26 +91,6 @@ class CitizenControllerTest {
                 .andExpect(jsonPath("$.data.userId").value("cit-1"))
                 .andExpect(jsonPath("$.data.status").value("V"))
                 .andExpect(jsonPath("$.data.nationalIdNumber").value("****7890"));
-    }
-
-    @Test
-    @WithMockUser(username = "cit-1", roles = "CIT")
-    void completeMyProfile_returns200_withMessage() throws Exception {
-        Map<String, Object> body = Map.of(
-                "dateOfBirth", "1990-01-01",
-                "gender", "Male",
-                "nationalIdNumber", "IND1234567890",
-                "address", "12 Main St",
-                "ward", "Ward 12",
-                "zone", "Zone A");
-
-        mockMvc.perform(post("/citizenProfile/me")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(body)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Profile completed successfully"));
-
-        verify(citizenService).completeProfile(any());
     }
 
     @Test
@@ -139,6 +149,18 @@ class CitizenControllerTest {
         mockMvc.perform(get("/citizenProfile/getAllCitizens"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].userId").value("c1"));
+    }
+
+    @Test
+    @WithMockUser(username = "officer-1", roles = "DS")
+    void getProof_streamsFile() throws Exception {
+        Resource resource = new ByteArrayResource("proof-bytes".getBytes());
+        when(citizenService.resolveProofFileName("cit-1")).thenReturn("proof.pdf");
+        when(fileStorage.load("proof.pdf")).thenReturn(resource);
+
+        mockMvc.perform(get("/citizenProfile/cit-1/proof"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF));
     }
 
     private CitizenProfileResponse profileResponse() {

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,10 +28,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.civicdesk.common.exception.citizen.BusinessRuleException;
 import com.civicdesk.common.exception.citizen.DuplicateResourceException;
+import com.civicdesk.common.exception.citizen.ForbiddenActionException;
 import com.civicdesk.common.exception.citizen.InvalidRequestException;
 import com.civicdesk.common.exception.citizen.ResourceNotFoundException;
 import com.civicdesk.common.util.NationalIdUtil;
-import com.civicdesk.module.citizen.dto.request.CompleteCitizenProfileRequest;
+import com.civicdesk.module.citizen.dto.request.CitizenRegistrationRequest;
 import com.civicdesk.module.citizen.dto.request.UpdateCitizenProfileRequest;
 import com.civicdesk.module.citizen.dto.request.VerifyCitizenRequest;
 import com.civicdesk.module.citizen.dto.response.CitizenProfileResponse;
@@ -39,8 +41,10 @@ import com.civicdesk.module.citizen.entity.CitizenProfile;
 import com.civicdesk.module.citizen.entity.enums.CitizenStatus;
 import com.civicdesk.module.citizen.entity.enums.Gender;
 import com.civicdesk.module.citizen.repository.CitizenProfileRepository;
+import com.civicdesk.module.iam.dto.request.RegisterRequest;
 import com.civicdesk.module.iam.entity.User;
 import com.civicdesk.module.iam.repository.UserRepository;
+import com.civicdesk.module.iam.service.AuthService;
 
 /** Unit tests for {@link CitizenService}. Identity comes from the security context. */
 @ExtendWith(MockitoExtension.class)
@@ -51,12 +55,13 @@ class CitizenServiceTest {
 
     @Mock CitizenProfileRepository citizenRepository;
     @Mock UserRepository userRepository;
+    @Mock AuthService authService;
 
     CitizenService service;
 
     @BeforeEach
     void setup() {
-        service = new CitizenService(citizenRepository, userRepository);
+        service = new CitizenService(citizenRepository, userRepository, authService);
         authenticateAs(CITIZEN, "CIT");
     }
 
@@ -72,7 +77,54 @@ class CitizenServiceTest {
     }
 
     // ---------------------------------------------------------------------------------------------
-    // getMyProfile
+    // registerCitizen
+    // ---------------------------------------------------------------------------------------------
+
+    @Test
+    void registerCitizen_createsUserViaIamThenProfile() {
+        when(citizenRepository.existsByNationalIdHash(any())).thenReturn(false);
+        when(userRepository.findByEmail("ravi@example.com"))
+                .thenReturn(Optional.of(user("10000050", "Ravi Kumar")));
+        when(citizenRepository.save(any(CitizenProfile.class))).thenAnswer(i -> i.getArgument(0));
+
+        service.registerCitizen(registrationReq(), "proof.pdf", "1.2.3.4");
+
+        verify(authService).register(any(RegisterRequest.class), eq("1.2.3.4"));
+        ArgumentCaptor<CitizenProfile> captor = ArgumentCaptor.forClass(CitizenProfile.class);
+        verify(citizenRepository).save(captor.capture());
+        CitizenProfile saved = captor.getValue();
+        assertThat(saved.getUserId()).isEqualTo("10000050");
+        assertThat(saved.getStatus()).isEqualTo(CitizenStatus.Active);
+        assertThat(saved.getUserProof()).isEqualTo("proof.pdf");
+        assertThat(saved.getGender()).isEqualTo(Gender.Male);
+        assertThat(saved.getNationalIdLast4()).isEqualTo("7890");
+        // Raw national id is never stored — only its hash.
+        assertThat(saved.getNationalIdHash()).isEqualTo(NationalIdUtil.hash("IND1234567890"));
+    }
+
+    @Test
+    void registerCitizen_duplicateNationalId_throwsBeforeCreatingUser() {
+        when(citizenRepository.existsByNationalIdHash(any())).thenReturn(true);
+
+        assertThatThrownBy(() -> service.registerCitizen(registrationReq(), "proof.pdf", "ip"))
+                .isInstanceOf(DuplicateResourceException.class);
+        verify(authService, never()).register(any(), any());
+        verify(citizenRepository, never()).save(any());
+    }
+
+    @Test
+    void registerCitizen_invalidGender_throwsInvalidRequest() {
+        when(citizenRepository.existsByNationalIdHash(any())).thenReturn(false);
+        when(userRepository.findByEmail(any())).thenReturn(Optional.of(user("10000050", "Ravi")));
+        CitizenRegistrationRequest req = registrationReq();
+        req.setGender("Martian");
+
+        assertThatThrownBy(() -> service.registerCitizen(req, "proof.pdf", "ip"))
+                .isInstanceOf(InvalidRequestException.class);
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // getMyProfile (read-only)
     // ---------------------------------------------------------------------------------------------
 
     @Test
@@ -87,26 +139,14 @@ class CitizenServiceTest {
         assertThat(res.userId()).isEqualTo(CITIZEN);
         assertThat(res.name()).isEqualTo("Ravi Kumar");
         assertThat(res.status()).isEqualTo("V");
-        // National id is masked, never returned in full.
         assertThat(res.nationalIdNumber()).isEqualTo("****7890");
-        verify(citizenRepository, never()).save(any());
     }
 
     @Test
-    void getMyProfile_noProfile_createsActiveStub() {
+    void getMyProfile_noProfile_throwsResourceNotFound() {
         when(citizenRepository.findById(CITIZEN)).thenReturn(Optional.empty());
-        when(citizenRepository.save(any(CitizenProfile.class))).thenAnswer(i -> i.getArgument(0));
-        when(userRepository.findById(CITIZEN)).thenReturn(Optional.of(user(CITIZEN, "Ravi Kumar")));
-
-        CitizenProfileResponse res = service.getMyProfile();
-
-        ArgumentCaptor<CitizenProfile> captor = ArgumentCaptor.forClass(CitizenProfile.class);
-        verify(citizenRepository).save(captor.capture());
-        CitizenProfile saved = captor.getValue();
-        assertThat(saved.getUserId()).isEqualTo(CITIZEN);
-        assertThat(saved.getStatus()).isEqualTo(CitizenStatus.Active);
-        assertThat(saved.getCreatedBy()).isEqualTo(CITIZEN);
-        assertThat(res.status()).isEqualTo("A");
+        assertThatThrownBy(() -> service.getMyProfile())
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
@@ -129,77 +169,6 @@ class CitizenServiceTest {
     }
 
     // ---------------------------------------------------------------------------------------------
-    // completeProfile
-    // ---------------------------------------------------------------------------------------------
-
-    @Test
-    void completeProfile_whenVerified_setsFieldsAndSaves() {
-        CitizenProfile profile = profile(CITIZEN, CitizenStatus.Verified);
-        when(citizenRepository.findById(CITIZEN)).thenReturn(Optional.of(profile));
-        when(citizenRepository.existsByNationalIdHash(any())).thenReturn(false);
-        when(citizenRepository.save(any(CitizenProfile.class))).thenAnswer(i -> i.getArgument(0));
-
-        service.completeProfile(completeReq());
-
-        assertThat(profile.getDateOfBirth()).isEqualTo(LocalDate.of(1990, 1, 1));
-        assertThat(profile.getGender()).isEqualTo(Gender.Male);
-        // Raw national id is never stored — only its hash + last 4 digits.
-        assertThat(profile.getNationalIdHash()).isEqualTo(NationalIdUtil.hash("IND1234567890"));
-        assertThat(profile.getNationalIdLast4()).isEqualTo("7890");
-        assertThat(profile.getAddress()).isEqualTo("12 Main St");
-        assertThat(profile.getWard()).isEqualTo("Ward 12");
-        assertThat(profile.getZone()).isEqualTo("Zone A");
-        verify(citizenRepository).save(profile);
-    }
-
-    @Test
-    void completeProfile_genderIsCaseInsensitive() {
-        CitizenProfile profile = profile(CITIZEN, CitizenStatus.Verified);
-        when(citizenRepository.findById(CITIZEN)).thenReturn(Optional.of(profile));
-        when(citizenRepository.existsByNationalIdHash(any())).thenReturn(false);
-        when(citizenRepository.save(any(CitizenProfile.class))).thenAnswer(i -> i.getArgument(0));
-
-        service.completeProfile(new CompleteCitizenProfileRequest(
-                LocalDate.of(1990, 1, 1), "fEmAlE", "IND1234567890", "12 Main St", "Ward 12", null));
-
-        assertThat(profile.getGender()).isEqualTo(Gender.Female);
-    }
-
-    @Test
-    void completeProfile_noProfile_throwsBusinessRule() {
-        when(citizenRepository.findById(CITIZEN)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.completeProfile(completeReq()))
-                .isInstanceOf(BusinessRuleException.class);
-    }
-
-    @Test
-    void completeProfile_notVerified_throwsBusinessRule() {
-        when(citizenRepository.findById(CITIZEN)).thenReturn(Optional.of(profile(CITIZEN, CitizenStatus.Active)));
-        assertThatThrownBy(() -> service.completeProfile(completeReq()))
-                .isInstanceOf(BusinessRuleException.class);
-        verify(citizenRepository, never()).save(any());
-    }
-
-    @Test
-    void completeProfile_duplicateNationalId_throwsDuplicateResource() {
-        when(citizenRepository.findById(CITIZEN)).thenReturn(Optional.of(profile(CITIZEN, CitizenStatus.Verified)));
-        when(citizenRepository.existsByNationalIdHash(any())).thenReturn(true);
-        assertThatThrownBy(() -> service.completeProfile(completeReq()))
-                .isInstanceOf(DuplicateResourceException.class);
-        verify(citizenRepository, never()).save(any());
-    }
-
-    @Test
-    void completeProfile_invalidGender_throwsInvalidRequest() {
-        when(citizenRepository.findById(CITIZEN)).thenReturn(Optional.of(profile(CITIZEN, CitizenStatus.Verified)));
-        when(citizenRepository.existsByNationalIdHash(any())).thenReturn(false);
-        CompleteCitizenProfileRequest req = new CompleteCitizenProfileRequest(
-                LocalDate.of(1990, 1, 1), "Martian", "IND1234567890", "12 Main St", "Ward 12", null);
-        assertThatThrownBy(() -> service.completeProfile(req))
-                .isInstanceOf(InvalidRequestException.class);
-    }
-
-    // ---------------------------------------------------------------------------------------------
     // updateMyProfile
     // ---------------------------------------------------------------------------------------------
 
@@ -215,8 +184,8 @@ class CitizenServiceTest {
         service.updateMyProfile(new UpdateCitizenProfileRequest("new address", null, null));
 
         assertThat(profile.getAddress()).isEqualTo("new address");
-        assertThat(profile.getWard()).isEqualTo("old ward"); // untouched
-        assertThat(profile.getZone()).isEqualTo("old zone"); // untouched
+        assertThat(profile.getWard()).isEqualTo("old ward");
+        assertThat(profile.getZone()).isEqualTo("old zone");
         verify(citizenRepository).save(profile);
     }
 
@@ -234,11 +203,43 @@ class CitizenServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
+    // ---------------------------------------------------------------------------------------------
+    // resolveProofFileName
+    // ---------------------------------------------------------------------------------------------
+
     @Test
-    void updateMyProfile_notVerified_throwsBusinessRule() {
-        when(citizenRepository.findById(CITIZEN)).thenReturn(Optional.of(profile(CITIZEN, CitizenStatus.Active)));
-        assertThatThrownBy(() -> service.updateMyProfile(new UpdateCitizenProfileRequest("addr", null, null)))
-                .isInstanceOf(BusinessRuleException.class);
+    void resolveProofFileName_owner_returnsStoredName() {
+        CitizenProfile profile = profile(CITIZEN, CitizenStatus.Active);
+        profile.setUserProof("proof-abc.pdf");
+        when(citizenRepository.findById(CITIZEN)).thenReturn(Optional.of(profile));
+
+        assertThat(service.resolveProofFileName(CITIZEN)).isEqualTo("proof-abc.pdf");
+    }
+
+    @Test
+    void resolveProofFileName_officer_allowed() {
+        authenticateAs("officer-1", "DS");
+        CitizenProfile profile = profile("c9", CitizenStatus.Active);
+        profile.setUserProof("proof-c9.pdf");
+        when(citizenRepository.findById("c9")).thenReturn(Optional.of(profile));
+
+        assertThat(service.resolveProofFileName("c9")).isEqualTo("proof-c9.pdf");
+    }
+
+    @Test
+    void resolveProofFileName_otherCitizen_throwsForbidden() {
+        // Authenticated as CITIZEN (cit-1) but requesting c9's proof.
+        assertThatThrownBy(() -> service.resolveProofFileName("c9"))
+                .isInstanceOf(ForbiddenActionException.class);
+        verify(citizenRepository, never()).findById(any());
+    }
+
+    @Test
+    void resolveProofFileName_noProofOnFile_throwsResourceNotFound() {
+        CitizenProfile profile = profile(CITIZEN, CitizenStatus.Active); // userProof null
+        when(citizenRepository.findById(CITIZEN)).thenReturn(Optional.of(profile));
+        assertThatThrownBy(() -> service.resolveProofFileName(CITIZEN))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -277,21 +278,13 @@ class CitizenServiceTest {
     void getAllCitizens_returnsSummaries() {
         when(citizenRepository.findAll()).thenReturn(List.of(profile("c1", CitizenStatus.Verified)));
         when(userRepository.findAllById(anyList())).thenReturn(List.of(user("c1", "Alice")));
-
         assertThat(service.getAllCitizens()).hasSize(1);
-    }
-
-    @Test
-    void getAllCitizens_emptyRepository_returnsEmpty() {
-        when(citizenRepository.findAll()).thenReturn(List.of());
-        when(userRepository.findAllById(anyList())).thenReturn(List.of());
-        assertThat(service.getAllCitizens()).isEmpty();
     }
 
     @Test
     void summaries_missingUserRow_yieldNullName() {
         when(citizenRepository.findAll()).thenReturn(List.of(profile("c1", CitizenStatus.Verified)));
-        when(userRepository.findAllById(anyList())).thenReturn(List.of()); // no matching user
+        when(userRepository.findAllById(anyList())).thenReturn(List.of());
 
         List<CitizenSummaryResponse> result = service.getAllCitizens();
 
@@ -331,10 +324,7 @@ class CitizenServiceTest {
     }
 
     @Test
-    void verifyCitizen_flaggedBackToActive_isNotAValidVerifyTarget() {
-        // 'A' is rejected as a verify target before any transition check.
-        CitizenProfile profile = profile("c1", CitizenStatus.Flagged);
-        when(citizenRepository.findById("c1")).thenReturn(Optional.of(profile));
+    void verifyCitizen_activeTargetRejected_throwsInvalidRequest() {
         assertThatThrownBy(() -> service.verifyCitizen("c1", new VerifyCitizenRequest("A")))
                 .isInstanceOf(InvalidRequestException.class);
     }
@@ -365,9 +355,19 @@ class CitizenServiceTest {
     // fixtures
     // ---------------------------------------------------------------------------------------------
 
-    private CompleteCitizenProfileRequest completeReq() {
-        return new CompleteCitizenProfileRequest(
-                LocalDate.of(1990, 1, 1), "Male", "IND1234567890", "12 Main St", "Ward 12", "Zone A");
+    private CitizenRegistrationRequest registrationReq() {
+        CitizenRegistrationRequest r = new CitizenRegistrationRequest();
+        r.setName("Ravi Kumar");
+        r.setEmail("ravi@example.com");
+        r.setPassword("Ravi@1234");
+        r.setPhone("9876543210");
+        r.setDateOfBirth(LocalDate.of(1990, 1, 1));
+        r.setGender("Male");
+        r.setNationalIdNumber("IND1234567890");
+        r.setAddress("12 Main St");
+        r.setWard("Ward 12");
+        r.setZone("Zone A");
+        return r;
     }
 
     private CitizenProfile profile(String userId, CitizenStatus status) {

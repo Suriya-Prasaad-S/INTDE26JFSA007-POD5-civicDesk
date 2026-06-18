@@ -89,7 +89,6 @@ class CitizenProfileRepositoryTest {
         p.setStatus(status);
         p.setWard(ward);
         p.setNationalIdHash(nationalIdHash);
-        p.setCreatedBy(userId);
         return p;
     }
 }

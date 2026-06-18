@@ -73,14 +73,18 @@ public class CitizenProfile {
     @Column(name = "zone")
     private String zone;
 
+    /**
+     * Stored file path of the identity-proof document the citizen submits at registration. The
+     * verifying officer reviews this to decide verification. (Distinct from {@code CitizenDocument},
+     * which is the wallet of government-issued documents.)
+     */
+    @Column(name = "userProof", length = 512)
+    private String userProof;
+
     @Convert(converter = CitizenStatusConverter.class)
     @Column(name = "status", nullable = false, length = 1)
     @Check(constraints = "status in ('A','V','F')")
     private CitizenStatus status;
-
-    /** The userId that created this profile row (the citizen themselves). */
-    @Column(name = "createdBy", length = 36, updatable = false)
-    private String createdBy;
 
     /** The officer's userId who verified (or flagged) this citizen; null until verified. */
     @Column(name = "verifiedBy", length = 36)
@@ -170,12 +174,12 @@ public class CitizenProfile {
         this.status = status;
     }
 
-    public String getCreatedBy() {
-        return createdBy;
+    public String getUserProof() {
+        return userProof;
     }
 
-    public void setCreatedBy(String createdBy) {
-        this.createdBy = createdBy;
+    public void setUserProof(String userProof) {
+        this.userProof = userProof;
     }
 
     public String getVerifiedBy() {

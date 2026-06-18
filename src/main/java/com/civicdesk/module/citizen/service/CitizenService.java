@@ -1,8 +1,13 @@
 package com.civicdesk.module.citizen.service;
 
+import com.civicdesk.common.exception.citizen.BusinessRuleException;
+import com.civicdesk.common.exception.citizen.DuplicateResourceException;
+import com.civicdesk.common.exception.citizen.ForbiddenActionException;
+import com.civicdesk.common.exception.citizen.InvalidRequestException;
+import com.civicdesk.common.exception.citizen.ResourceNotFoundException;
 import com.civicdesk.common.util.NationalIdUtil;
 import com.civicdesk.common.util.SecurityContextUtil;
-import com.civicdesk.module.citizen.dto.request.CompleteCitizenProfileRequest;
+import com.civicdesk.module.citizen.dto.request.CitizenRegistrationRequest;
 import com.civicdesk.module.citizen.dto.request.UpdateCitizenProfileRequest;
 import com.civicdesk.module.citizen.dto.request.VerifyCitizenRequest;
 import com.civicdesk.module.citizen.dto.response.CitizenProfileResponse;
@@ -10,13 +15,11 @@ import com.civicdesk.module.citizen.dto.response.CitizenSummaryResponse;
 import com.civicdesk.module.citizen.entity.CitizenProfile;
 import com.civicdesk.module.citizen.entity.enums.CitizenStatus;
 import com.civicdesk.module.citizen.entity.enums.Gender;
-import com.civicdesk.common.exception.citizen.BusinessRuleException;
-import com.civicdesk.common.exception.citizen.DuplicateResourceException;
-import com.civicdesk.common.exception.citizen.InvalidRequestException;
-import com.civicdesk.common.exception.citizen.ResourceNotFoundException;
 import com.civicdesk.module.citizen.repository.CitizenProfileRepository;
+import com.civicdesk.module.iam.dto.request.RegisterRequest;
 import com.civicdesk.module.iam.entity.User;
 import com.civicdesk.module.iam.repository.UserRepository;
+import com.civicdesk.module.iam.service.AuthService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,12 +33,12 @@ import java.util.stream.Collectors;
  * Business logic for the citizen profile lifecycle.
  *
  * <p>A {@link CitizenProfile} shares its primary key with the IAM {@code User} ({@code userId}).
- * Identity fields (name/email/phone) are read from {@code User} via {@link UserRepository}; this
- * service owns only the citizen-specific extras and the verification {@code status}.
+ * Identity fields (name/email/phone) live on {@code User}; this service owns the citizen-specific
+ * extras, the verification {@code status}, and the identity-proof reference.
  *
- * <p>Lifecycle: a stub profile (status {@link CitizenStatus#Active}) is auto-created on the
- * citizen's first {@code GET /me}; an officer then verifies them ({@code Active -> Verified}); the
- * verified citizen completes the extra-fields form.
+ * <p>Lifecycle: the citizen self-registers via {@link #registerCitizen} (which creates both the
+ * {@code User} — through IAM — and the {@code CitizenProfile}, status {@code Active}); an officer
+ * reviews the proof and verifies them ({@code Active -> Verified}).
  */
 @Service
 @Transactional(readOnly = true)
@@ -43,60 +46,73 @@ public class CitizenService {
 
     private final CitizenProfileRepository citizenRepository;
     private final UserRepository userRepository;
+    private final AuthService authService;
 
-    public CitizenService(CitizenProfileRepository citizenRepository, UserRepository userRepository) {
+    public CitizenService(CitizenProfileRepository citizenRepository,
+                          UserRepository userRepository,
+                          AuthService authService) {
         this.citizenRepository = citizenRepository;
         this.userRepository = userRepository;
+        this.authService = authService;
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Registration (public)
+    // ---------------------------------------------------------------------------------------------
+
+    /**
+     * Registers a citizen in one step: creates the IAM {@code User} (delegated to
+     * {@link AuthService#register} so the password is hashed and all IAM invariants/audit apply),
+     * then creates the {@link CitizenProfile} (status {@code Active}) with the proof reference.
+     * Runs in one transaction, so a failure rolls back the user too.
+     *
+     * @param proofPath stored file name of the uploaded identity-proof document
+     * @param ip        caller IP (for IAM's audit log)
+     */
+    @Transactional
+    public void registerCitizen(CitizenRegistrationRequest req, String proofPath, String ip) {
+        String nationalIdHash = NationalIdUtil.hash(req.getNationalIdNumber());
+        if (citizenRepository.existsByNationalIdHash(nationalIdHash)) {
+            throw new DuplicateResourceException("National ID already registered");
+        }
+
+        RegisterRequest userReq = new RegisterRequest();
+        userReq.setName(req.getName());
+        userReq.setEmail(req.getEmail());
+        userReq.setPassword(req.getPassword());
+        userReq.setPhone(req.getPhone());
+        authService.register(userReq, ip); // hashes password, role=CIT, status=A, dup-email check, audit
+
+        User user = userRepository.findByEmail(req.getEmail())
+                .orElseThrow(() -> new BusinessRuleException("User creation failed during registration"));
+
+        CitizenProfile profile = new CitizenProfile();
+        profile.setUserId(user.getUserId());
+        profile.setDateOfBirth(req.getDateOfBirth());
+        profile.setGender(parseGender(req.getGender()));
+        profile.setNationalIdHash(nationalIdHash);
+        profile.setNationalIdLast4(last4(req.getNationalIdNumber()));
+        profile.setAddress(req.getAddress());
+        profile.setWard(req.getWard());
+        profile.setZone(req.getZone());
+        profile.setUserProof(proofPath);
+        profile.setStatus(CitizenStatus.Active);
+        citizenRepository.save(profile);
     }
 
     // ---------------------------------------------------------------------------------------------
     // Citizen-facing (identity from the JWT)
     // ---------------------------------------------------------------------------------------------
 
-    /**
-     * Returns the current citizen's profile, lazily creating a stub (status {@code Active}) on the
-     * first call so the citizen enters the pending-verification queue.
-     */
-    @Transactional
+    /** The current citizen's profile (created at registration); 404 if none. */
     public CitizenProfileResponse getMyProfile() {
         String userId = currentUserId();
         CitizenProfile profile = citizenRepository.findById(userId)
-                .orElseGet(() -> createStub(userId));
+                .orElseThrow(() -> new ResourceNotFoundException("Citizen profile not found"));
         return toProfileResponse(profile, userRepository.findById(userId).orElse(null));
     }
 
-    /**
-     * Completes the current citizen's profile (the extra fields). The citizen must already be
-     * {@link CitizenStatus#Verified} (409 otherwise) and the national id must be unique (409).
-     */
-    @Transactional
-    public void completeProfile(CompleteCitizenProfileRequest request) {
-        String userId = currentUserId();
-        CitizenProfile profile = citizenRepository.findById(userId)
-                .orElseThrow(() -> new BusinessRuleException(
-                        "You must be verified before completing your profile"));
-
-        if (profile.getStatus() != CitizenStatus.Verified) {
-            throw new BusinessRuleException(
-                    "Profile can be completed only after verification (current status: "
-                            + profile.getStatus().getCode() + ")");
-        }
-        String nationalIdHash = NationalIdUtil.hash(request.nationalIdNumber());
-        if (citizenRepository.existsByNationalIdHash(nationalIdHash)) {
-            throw new DuplicateResourceException("National ID already registered");
-        }
-
-        profile.setDateOfBirth(request.dateOfBirth());
-        profile.setGender(parseGender(request.gender()));
-        profile.setNationalIdHash(nationalIdHash);
-        profile.setNationalIdLast4(last4(request.nationalIdNumber()));
-        profile.setAddress(request.address());
-        profile.setWard(request.ward());
-        profile.setZone(request.zone());
-        citizenRepository.save(profile);
-    }
-
-    /** Updates the current citizen's mutable extra fields (address/ward/zone). */
+    /** Updates the current citizen's mutable fields (address/ward/zone). */
     @Transactional
     public void updateMyProfile(UpdateCitizenProfileRequest request) {
         if (isEmptyUpdate(request)) {
@@ -105,12 +121,6 @@ public class CitizenService {
         String userId = currentUserId();
         CitizenProfile profile = citizenRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Citizen profile not found"));
-
-        if (profile.getStatus() != CitizenStatus.Verified) {
-            throw new BusinessRuleException(
-                    "Profile can be updated only after verification (current status: "
-                            + profile.getStatus().getCode() + ")");
-        }
 
         if (request.address() != null) {
             profile.setAddress(request.address());
@@ -122,6 +132,21 @@ public class CitizenService {
             profile.setZone(request.zone());
         }
         citizenRepository.save(profile);
+    }
+
+    /**
+     * Resolves the stored proof file name for a citizen after authorizing the caller: the owning
+     * citizen or any officer (FO/DS/ADM). 404 if no profile or no proof on file.
+     */
+    public String resolveProofFileName(String citizenUserId) {
+        authorizeProofView(citizenUserId);
+        CitizenProfile profile = citizenRepository.findById(citizenUserId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Citizen profile not found: " + citizenUserId));
+        if (profile.getUserProof() == null || profile.getUserProof().isBlank()) {
+            throw new ResourceNotFoundException("No proof document on file for: " + citizenUserId);
+        }
+        return profile.getUserProof();
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -173,14 +198,6 @@ public class CitizenService {
     // Helpers
     // ---------------------------------------------------------------------------------------------
 
-    private CitizenProfile createStub(String userId) {
-        CitizenProfile profile = new CitizenProfile();
-        profile.setUserId(userId);
-        profile.setStatus(CitizenStatus.Active);
-        profile.setCreatedBy(userId);
-        return citizenRepository.save(profile);
-    }
-
     /** Allowed citizen status transitions (officer-driven). */
     private static boolean isAllowedTransition(CitizenStatus from, CitizenStatus to) {
         return switch (from) {
@@ -192,6 +209,21 @@ public class CitizenService {
 
     private static boolean isEmptyUpdate(UpdateCitizenProfileRequest r) {
         return r.address() == null && r.ward() == null && r.zone() == null;
+    }
+
+    /** A citizen may view only their own proof; officers may view any. */
+    private void authorizeProofView(String citizenUserId) {
+        String role = SecurityContextUtil.getCurrentRole();
+        if ("CIT".equals(role)) {
+            if (!citizenUserId.equals(currentUserId())) {
+                throw new ForbiddenActionException("You can only access your own proof document");
+            }
+            return;
+        }
+        if ("FO".equals(role) || "DS".equals(role) || "ADM".equals(role)) {
+            return;
+        }
+        throw new ForbiddenActionException("Not permitted to access this proof document");
     }
 
     /** Builds summaries, sourcing each citizen's name from {@code User} in a single batch query. */

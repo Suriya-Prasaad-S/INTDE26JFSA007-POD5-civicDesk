@@ -34,6 +34,8 @@ public class SecurityConfig {
                         .requestMatchers("/iam/auth/citizen/login").permitAll()
                         .requestMatchers("/iam/auth/staff/login").permitAll()
                         .requestMatchers("/iam/auth/setPassword").permitAll()
+                        // Citizen self-registration (creates the User + CitizenProfile together).
+                        .requestMatchers("/citizenProfile/register").permitAll()
                         // Swagger / OpenAPI UI
                         .requestMatchers(
                                 "/swagger-ui.html",

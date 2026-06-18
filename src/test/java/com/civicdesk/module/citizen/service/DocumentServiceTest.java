@@ -24,11 +24,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import com.civicdesk.common.exception.citizen.BusinessRuleException;
 import com.civicdesk.common.exception.citizen.ForbiddenActionException;
 import com.civicdesk.common.exception.citizen.InvalidRequestException;
 import com.civicdesk.common.exception.citizen.ResourceNotFoundException;
-import com.civicdesk.module.citizen.dto.request.VerifyDocumentRequest;
 import com.civicdesk.module.citizen.dto.response.DocumentDetailResponse;
 import com.civicdesk.module.citizen.dto.response.DocumentSummaryResponse;
 import com.civicdesk.module.citizen.entity.CitizenDocument;
@@ -36,23 +34,25 @@ import com.civicdesk.module.citizen.entity.enums.DocumentStatus;
 import com.civicdesk.module.citizen.entity.enums.DocumentType;
 import com.civicdesk.module.citizen.repository.CitizenDocumentRepository;
 import com.civicdesk.module.citizen.repository.CitizenProfileRepository;
+import com.civicdesk.module.citizen.support.FileStorageService;
 
-/** Unit tests for {@link DocumentService}. */
+/** Unit tests for {@link DocumentService} — the citizen document wallet. */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class DocumentServiceTest {
 
     private static final String CITIZEN = "cit-1";
-    private static final String FILE_PATH = "http://localhost/civicDesk/citizenProfile/files/abc.pdf";
+    private static final String FILE_PATH = "abc.pdf";
 
     @Mock CitizenDocumentRepository documentRepository;
     @Mock CitizenProfileRepository citizenRepository;
+    @Mock FileStorageService fileStorage;
 
     DocumentService service;
 
     @BeforeEach
     void setup() {
-        service = new DocumentService(documentRepository, citizenRepository);
+        service = new DocumentService(documentRepository, citizenRepository, fileStorage);
         authenticateAs(CITIZEN, "CIT");
     }
 
@@ -68,116 +68,70 @@ class DocumentServiceTest {
     }
 
     // ---------------------------------------------------------------------------------------------
-    // uploadDocument
+    // addDocument (in-process push by the service-request module)
     // ---------------------------------------------------------------------------------------------
 
     @Test
-    void uploadDocument_valid_savesAsValidAndReturnsId() {
+    void addDocument_storesFileAndSavesValidRecord() {
         when(citizenRepository.existsById(CITIZEN)).thenReturn(true);
-        when(documentRepository.countByCitizenId(CITIZEN)).thenReturn(0L);
+        when(fileStorage.exists(any())).thenReturn(true);
         when(documentRepository.save(any(CitizenDocument.class))).thenAnswer(i -> {
             CitizenDocument d = i.getArgument(0);
             d.setDocumentId("50000001");
             return d;
         });
 
-        String id = service.uploadDocument(CITIZEN, "NationalID", "id.pdf",
-                "application/pdf", 1500, FILE_PATH);
+        String id = service.addDocument(CITIZEN, "BirthCertificate", "birth.pdf",
+                "pdf-bytes".getBytes(), LocalDate.of(2024, 1, 1), null);
 
         assertThat(id).isEqualTo("50000001");
+        verify(fileStorage).store(any(), any());
         ArgumentCaptor<CitizenDocument> captor = ArgumentCaptor.forClass(CitizenDocument.class);
         verify(documentRepository).save(captor.capture());
         CitizenDocument saved = captor.getValue();
         assertThat(saved.getCitizenId()).isEqualTo(CITIZEN);
-        assertThat(saved.getDocumentType()).isEqualTo(DocumentType.NationalID);
-        assertThat(saved.getFileName()).isEqualTo("id.pdf");
-        assertThat(saved.getFilePath()).isEqualTo(FILE_PATH);
+        assertThat(saved.getDocumentType()).isEqualTo(DocumentType.BirthCertificate);
+        assertThat(saved.getFileName()).isEqualTo("birth.pdf");
         assertThat(saved.getFileType()).isEqualTo("pdf");
         assertThat(saved.getStatus()).isEqualTo(DocumentStatus.Valid);
-        // 1500 bytes -> ceil(1500/1024) = 2 KB
-        assertThat(saved.getFileSizeKb()).isEqualTo(2);
+        assertThat(saved.getIssuedDate()).isEqualTo(LocalDate.of(2024, 1, 1));
     }
 
     @Test
-    void uploadDocument_uppercaseMime_isAcceptedCaseInsensitively() {
-        when(citizenRepository.existsById(CITIZEN)).thenReturn(true);
-        when(documentRepository.countByCitizenId(CITIZEN)).thenReturn(0L);
-        when(documentRepository.save(any(CitizenDocument.class))).thenAnswer(i -> i.getArgument(0));
-
-        service.uploadDocument(CITIZEN, "ResidenceProof", "photo.JPG", "IMAGE/JPEG", 1024, FILE_PATH);
-
-        verify(documentRepository).save(any(CitizenDocument.class));
-    }
-
-    @Test
-    void uploadDocument_notSelf_throwsForbidden() {
-        assertThatThrownBy(() -> service.uploadDocument("someone-else", "NationalID", "id.pdf",
-                "application/pdf", 1000, FILE_PATH))
-                .isInstanceOf(ForbiddenActionException.class);
-        verify(documentRepository, never()).save(any());
-    }
-
-    @Test
-    void uploadDocument_citizenDoesNotExist_throwsResourceNotFound() {
+    void addDocument_citizenDoesNotExist_throwsResourceNotFound() {
         when(citizenRepository.existsById(CITIZEN)).thenReturn(false);
-        assertThatThrownBy(() -> service.uploadDocument(CITIZEN, "NationalID", "id.pdf",
-                "application/pdf", 1000, FILE_PATH))
+        assertThatThrownBy(() -> service.addDocument(CITIZEN, "NationalID", "id.pdf",
+                "x".getBytes(), null, null))
                 .isInstanceOf(ResourceNotFoundException.class);
-    }
-
-    @Test
-    void uploadDocument_invalidDocumentType_throwsInvalidRequest() {
-        when(citizenRepository.existsById(CITIZEN)).thenReturn(true);
-        assertThatThrownBy(() -> service.uploadDocument(CITIZEN, "Passport", "id.pdf",
-                "application/pdf", 1000, FILE_PATH))
-                .isInstanceOf(InvalidRequestException.class);
-    }
-
-    @Test
-    void uploadDocument_limitReached_throwsBusinessRule() {
-        when(citizenRepository.existsById(CITIZEN)).thenReturn(true);
-        when(documentRepository.countByCitizenId(CITIZEN)).thenReturn(5L);
-        assertThatThrownBy(() -> service.uploadDocument(CITIZEN, "NationalID", "id.pdf",
-                "application/pdf", 1000, FILE_PATH))
-                .isInstanceOf(BusinessRuleException.class);
         verify(documentRepository, never()).save(any());
     }
 
     @Test
-    void uploadDocument_emptyFile_throwsInvalidRequest() {
+    void addDocument_invalidDocumentType_throwsInvalidRequest() {
         when(citizenRepository.existsById(CITIZEN)).thenReturn(true);
-        when(documentRepository.countByCitizenId(CITIZEN)).thenReturn(0L);
-        assertThatThrownBy(() -> service.uploadDocument(CITIZEN, "NationalID", "id.pdf",
-                "application/pdf", 0, FILE_PATH))
+        assertThatThrownBy(() -> service.addDocument(CITIZEN, "Passport", "id.pdf",
+                "x".getBytes(), null, null))
                 .isInstanceOf(InvalidRequestException.class);
     }
 
     @Test
-    void uploadDocument_tooLarge_throwsInvalidRequest() {
+    void addDocument_fileNotStored_throwsAndDoesNotSaveRecord() {
         when(citizenRepository.existsById(CITIZEN)).thenReturn(true);
-        when(documentRepository.countByCitizenId(CITIZEN)).thenReturn(0L);
-        long tooBig = 2L * 1024 * 1024 + 1;
-        assertThatThrownBy(() -> service.uploadDocument(CITIZEN, "NationalID", "id.pdf",
-                "application/pdf", tooBig, FILE_PATH))
+        when(fileStorage.exists(any())).thenReturn(false); // store landed nowhere
+
+        assertThatThrownBy(() -> service.addDocument(CITIZEN, "NationalID", "id.pdf",
+                "x".getBytes(), null, null))
                 .isInstanceOf(InvalidRequestException.class);
+        verify(documentRepository, never()).save(any());
     }
 
     @Test
-    void uploadDocument_unsupportedExtension_throwsInvalidRequest() {
+    void addDocument_emptyContent_throwsInvalidRequest() {
         when(citizenRepository.existsById(CITIZEN)).thenReturn(true);
-        when(documentRepository.countByCitizenId(CITIZEN)).thenReturn(0L);
-        assertThatThrownBy(() -> service.uploadDocument(CITIZEN, "NationalID", "virus.exe",
-                "application/pdf", 1000, FILE_PATH))
+        assertThatThrownBy(() -> service.addDocument(CITIZEN, "NationalID", "id.pdf",
+                new byte[0], null, null))
                 .isInstanceOf(InvalidRequestException.class);
-    }
-
-    @Test
-    void uploadDocument_unsupportedMime_throwsInvalidRequest() {
-        when(citizenRepository.existsById(CITIZEN)).thenReturn(true);
-        when(documentRepository.countByCitizenId(CITIZEN)).thenReturn(0L);
-        assertThatThrownBy(() -> service.uploadDocument(CITIZEN, "NationalID", "id.pdf",
-                "text/plain", 1000, FILE_PATH))
-                .isInstanceOf(InvalidRequestException.class);
+        verify(documentRepository, never()).save(any());
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -212,7 +166,7 @@ class DocumentServiceTest {
     @Test
     void getAllDocuments_expiredValidDocument_reportsEffectiveExpired() {
         CitizenDocument d = document("d1", DocumentStatus.Valid);
-        d.setExpiryDate(LocalDate.now().minusDays(1)); // still stored Valid but past expiry
+        d.setExpiryDate(LocalDate.now().minusDays(1));
         when(citizenRepository.existsById(CITIZEN)).thenReturn(true);
         when(documentRepository.findByCitizenId(CITIZEN)).thenReturn(List.of(d));
 
@@ -222,7 +176,7 @@ class DocumentServiceTest {
     }
 
     // ---------------------------------------------------------------------------------------------
-    // getDocumentById
+    // getDocumentById / resolveDownloadFileName
     // ---------------------------------------------------------------------------------------------
 
     @Test
@@ -250,81 +204,24 @@ class DocumentServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
-    // ---------------------------------------------------------------------------------------------
-    // verifyDocument
-    // ---------------------------------------------------------------------------------------------
-
     @Test
-    void verifyDocument_validToRevoked_savesAndStampsVerifier() {
-        authenticateAs("officer-1", "DS");
-        CitizenDocument d = document("d1", DocumentStatus.Valid);
-        when(documentRepository.findByDocumentIdAndCitizenId("d1", CITIZEN)).thenReturn(Optional.of(d));
-        when(documentRepository.save(any(CitizenDocument.class))).thenAnswer(i -> i.getArgument(0));
-
-        service.verifyDocument(CITIZEN, "d1", new VerifyDocumentRequest("R"));
-
-        assertThat(d.getStatus()).isEqualTo(DocumentStatus.Revoked);
-        assertThat(d.getVerifiedBy()).isEqualTo("officer-1");
-        assertThat(d.getVerifiedAt()).isNotNull();
-        verify(documentRepository).save(d);
+    void resolveDownloadFileName_returnsStoredFileName() {
+        when(documentRepository.findByDocumentIdAndCitizenId("d1", CITIZEN))
+                .thenReturn(Optional.of(document("d1", DocumentStatus.Valid)));
+        assertThat(service.resolveDownloadFileName(CITIZEN, "d1")).isEqualTo(FILE_PATH);
     }
 
     @Test
-    void verifyDocument_validToValid_confirmIsAllowed() {
-        authenticateAs("officer-1", "DS");
-        CitizenDocument d = document("d1", DocumentStatus.Valid);
-        when(documentRepository.findByDocumentIdAndCitizenId("d1", CITIZEN)).thenReturn(Optional.of(d));
-        when(documentRepository.save(any(CitizenDocument.class))).thenAnswer(i -> i.getArgument(0));
-
-        service.verifyDocument(CITIZEN, "d1", new VerifyDocumentRequest("V"));
-
-        assertThat(d.getStatus()).isEqualTo(DocumentStatus.Valid);
-        assertThat(d.getVerifiedBy()).isEqualTo("officer-1");
+    void resolveDownloadFileName_notSelf_throwsForbidden() {
+        assertThatThrownBy(() -> service.resolveDownloadFileName("someone-else", "d1"))
+                .isInstanceOf(ForbiddenActionException.class);
     }
 
     @Test
-    void verifyDocument_expiredToRevoked_allowedViaEffectiveStatus() {
-        authenticateAs("officer-1", "DS");
-        CitizenDocument d = document("d1", DocumentStatus.Valid);
-        d.setExpiryDate(LocalDate.now().minusDays(1)); // effectively Expired
-        when(documentRepository.findByDocumentIdAndCitizenId("d1", CITIZEN)).thenReturn(Optional.of(d));
-        when(documentRepository.save(any(CitizenDocument.class))).thenAnswer(i -> i.getArgument(0));
-
-        service.verifyDocument(CITIZEN, "d1", new VerifyDocumentRequest("R"));
-
-        assertThat(d.getStatus()).isEqualTo(DocumentStatus.Revoked);
-    }
-
-    @Test
-    void verifyDocument_notFound_throwsResourceNotFound() {
+    void resolveDownloadFileName_notFound_throwsResourceNotFound() {
         when(documentRepository.findByDocumentIdAndCitizenId("d1", CITIZEN)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.verifyDocument(CITIZEN, "d1", new VerifyDocumentRequest("R")))
+        assertThatThrownBy(() -> service.resolveDownloadFileName(CITIZEN, "d1"))
                 .isInstanceOf(ResourceNotFoundException.class);
-    }
-
-    @Test
-    void verifyDocument_invalidStatusCode_throwsInvalidRequest() {
-        CitizenDocument d = document("d1", DocumentStatus.Valid);
-        when(documentRepository.findByDocumentIdAndCitizenId("d1", CITIZEN)).thenReturn(Optional.of(d));
-        assertThatThrownBy(() -> service.verifyDocument(CITIZEN, "d1", new VerifyDocumentRequest("Z")))
-                .isInstanceOf(InvalidRequestException.class);
-    }
-
-    @Test
-    void verifyDocument_expiredIsNeverAManualTarget_throwsBusinessRule() {
-        CitizenDocument d = document("d1", DocumentStatus.Valid);
-        when(documentRepository.findByDocumentIdAndCitizenId("d1", CITIZEN)).thenReturn(Optional.of(d));
-        assertThatThrownBy(() -> service.verifyDocument(CITIZEN, "d1", new VerifyDocumentRequest("E")))
-                .isInstanceOf(BusinessRuleException.class);
-        verify(documentRepository, never()).save(any());
-    }
-
-    @Test
-    void verifyDocument_revokedIsTerminal_throwsBusinessRule() {
-        CitizenDocument d = document("d1", DocumentStatus.Revoked);
-        when(documentRepository.findByDocumentIdAndCitizenId("d1", CITIZEN)).thenReturn(Optional.of(d));
-        assertThatThrownBy(() -> service.verifyDocument(CITIZEN, "d1", new VerifyDocumentRequest("V")))
-                .isInstanceOf(BusinessRuleException.class);
     }
 
     // ---------------------------------------------------------------------------------------------
