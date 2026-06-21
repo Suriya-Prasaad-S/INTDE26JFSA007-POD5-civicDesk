@@ -20,7 +20,7 @@ import com.civicdesk.module.serviceRequest.service.ServiceCatalogService;
 import com.civicdesk.module.serviceRequest.service.ServiceRequestService;
 import jakarta.validation.Valid;
 
-import org.springframework.beans.factory.annotation.Autowired;
+//import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -50,16 +50,25 @@ import java.util.List;
 @RequestMapping("/serviceRequest")
 public class ServiceRequestController {
 
-    @Autowired
+   //@Autowired
     private ServiceCatalogService serviceCatalogService;
-    @Autowired
+    //@Autowired
     private ServiceRequestService serviceRequestService;
-    @Autowired
+    //@Autowired
     private DocumentService documentService;
-    @Autowired
+    //@Autowired
     private ServiceRequestAccessGuard accessGuard;
 
-    // ---------------------------------------------------------------- Catalog services
+    
+
+    public ServiceRequestController(ServiceCatalogService serviceCatalogService,
+            ServiceRequestService serviceRequestService, DocumentService documentService,
+            ServiceRequestAccessGuard accessGuard) {
+        this.serviceCatalogService = serviceCatalogService;
+        this.serviceRequestService = serviceRequestService;
+        this.documentService = documentService;
+        this.accessGuard = accessGuard;
+    }
 
     /** List all Active services, optionally filtered by category. */
     @GetMapping("/getAllServices")
