@@ -23,6 +23,7 @@ civicdesk-main/
     │   │   │   ├── response/           #   shared response envelopes
     │   │   │   └── util/               #   shared utilities (jwt, security context, …)
     │   │   └── module/                 # ONE folder per module — owners fill these in
+    │   │       ├── iam/                # Module 2.1 — Suriya
     │   │       ├── citizen/            # Module 2.2 — Pruthiviraj
     │   │       ├── servicerequest/     # Module 2.3 — Haresh
     │   │       ├── permit/             # Module 2.4 — Amirtha
