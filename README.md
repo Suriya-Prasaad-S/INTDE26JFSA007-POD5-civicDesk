@@ -11,6 +11,7 @@ role-based access control, user administration, and audit logging.
 - BCrypt password hashing (cost 10)
 - UUID v4 primary keys (`CHAR(36)`)
 
+<<<<<<< HEAD
 > **Note on the framework version:** the project was scaffolded with Spring Boot
 > `4.0.6`, but the assignment spec and all provided code target **Spring Boot 3.x /
 > Spring Security 6**. `pom.xml` is therefore pinned to `3.4.1` so the documented
@@ -24,6 +25,32 @@ role-based access control, user administration, and audit logging.
 # Set spring.datasource.username / password in src/main/resources/application.properties, then:
 ./mvnw spring-boot:run                              # default profile
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev   # verbose SQL
+=======
+```
+civicdesk-main/
+├── pom.xml                     # shared build + dependencies (the common build file)
+├── mvnw, mvnw.cmd, .mvn/       # Maven wrapper
+├── Dockerfile, .gitignore
+└── src/
+    ├── main/
+    │   ├── java/com/civicdesk/
+    │   │   ├── config/                 # shared @Configuration (security, cors, openapi, …)
+    │   │   ├── common/                 # cross-module shared building blocks
+    │   │   │   ├── exception/          #   global handler + shared exception types
+    │   │   │   ├── response/           #   shared response envelopes
+    │   │   │   └── util/               #   shared utilities (jwt, security context, …)
+    │   │   └── module/                 # ONE folder per module — owners fill these in
+    │   │       ├── iam/                # Module 2.1 — Suriya
+    │   │       ├── citizen/            # Module 2.2 — Pruthiviraj
+    │   │       ├── servicerequest/     # Module 2.3 — Haresh
+    │   │       ├── permit/             # Module 2.4 — Amirtha
+    │   │       ├── grievance/          # Module 2.5 — Anand
+    │   │       └── analytics/          # Module 2.7 — Suriya
+    │   └── resources/
+    │       └── application.properties  # config template (placeholders, no secrets)
+    └── test/
+        └── java/com/civicdesk/module/<module>/{controller,service,repository,integration}/
+>>>>>>> 2c97d88e96f773ca5a3260f3d0973add7b28f420
 ```
 
 App starts on `http://localhost:8081/civicDesk` (context path `/civicDesk`).
