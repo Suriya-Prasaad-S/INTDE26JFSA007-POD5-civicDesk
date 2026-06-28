@@ -6,10 +6,10 @@ import com.civicdesk.common.util.ClientIpUtil;
 import com.civicdesk.common.util.SecurityContextUtil;
 import com.civicdesk.module.iam.dto.request.CreateUserRequest;
 import com.civicdesk.module.iam.dto.request.UpdateUserStatusRequest;
+import com.civicdesk.module.auditlog.enums.AuditAction;
+import com.civicdesk.module.auditlog.enums.AuditModule;
+import com.civicdesk.module.auditlog.service.AuditService;
 import com.civicdesk.module.iam.dto.response.UserResponse;
-import com.civicdesk.module.iam.enums.AuditAction;
-import com.civicdesk.module.iam.enums.AuditModule;
-import com.civicdesk.module.iam.service.AuditService;
 import com.civicdesk.module.iam.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -43,11 +43,6 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.data(user));
     }
 
-    /**
-     * Shared create endpoint. ADM may create DS; DS
-     * may create FO / ENG / CO within their own
-     * department. The fine-grained role gate lives in the service.
-     */
     @PostMapping
     @PreAuthorize("hasAnyRole('ADM', 'DS')")
     public ResponseEntity<ApiResponse> createUser(

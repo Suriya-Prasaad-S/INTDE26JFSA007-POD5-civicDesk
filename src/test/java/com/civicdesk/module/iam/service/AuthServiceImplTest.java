@@ -8,6 +8,7 @@ import com.civicdesk.common.exception.ForbiddenException;
 import com.civicdesk.common.exception.PasswordNotSetException;
 import com.civicdesk.common.exception.ResourceNotFoundException;
 import com.civicdesk.common.util.JwtUtil;
+import com.civicdesk.module.auditlog.service.AuditService;
 import com.civicdesk.module.iam.dto.request.CitizenLoginRequest;
 import com.civicdesk.module.iam.dto.request.RegisterRequest;
 import com.civicdesk.module.iam.dto.request.SetPasswordRequest;

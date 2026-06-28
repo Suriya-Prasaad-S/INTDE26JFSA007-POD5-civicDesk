@@ -1,4 +1,4 @@
-package com.civicdesk.module.iam.entity;
+package com.civicdesk.module.auditlog.entity;
 
 import com.civicdesk.common.id.NumericStringSequenceGenerator;
 import jakarta.persistence.Column;
@@ -13,10 +13,6 @@ import org.hibernate.annotations.Parameter;
 
 import java.time.LocalDateTime;
 
-// columnList values match the physical (camelCase) column names — this project uses
-// PhysicalNamingStrategyStandardImpl, so columns are NOT snake_cased.
-// Indexes back the audit-log filters (by userId / action / module) and the default
-// timestamp-desc ordering, keeping queries fast as the table grows.
 @Entity
 @Table(name = "audit_log", indexes = {
     @Index(name = "idx_audit_userId",    columnList = "userId"),
@@ -26,7 +22,6 @@ import java.time.LocalDateTime;
 })
 public class AuditLog {
 
-    // Sequential numeric id rendered as a String: 10000001, 10000002, … (was a UUID).
     @Id
     @GeneratedValue(generator = "auditIdSeq")
     @GenericGenerator(
@@ -38,10 +33,10 @@ public class AuditLog {
                 @Parameter(name = "increment_size", value = "1"),
                 @Parameter(name = "optimizer", value = "none")
             })
-    @Column(name = "auditId", length = 36, updatable = false, nullable = false)
+    @Column(name = "auditId", length = 20, updatable = false, nullable = false)
     private String auditId;
 
-    @Column(name = "userId", nullable = false, length = 36)
+    @Column(name = "userId", nullable = false, length = 20)
     private String userId;
 
     @Column(nullable = false, length = 50)

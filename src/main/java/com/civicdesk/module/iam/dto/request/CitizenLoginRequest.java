@@ -3,7 +3,6 @@ package com.civicdesk.module.iam.dto.request;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
-/** Citizen portal login â€” CIT role only. */
 public class CitizenLoginRequest {
 
     @NotBlank(message = "email is required")

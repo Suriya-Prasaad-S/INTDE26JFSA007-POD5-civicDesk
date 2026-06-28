@@ -1,8 +1,8 @@
-package com.civicdesk.module.iam.enums;
+package com.civicdesk.module.auditlog.enums;
 
-/** CivicDesk modules that emit audit-log entries. */
 public enum AuditModule {
     IAM,
+    CITIZEN_PROFILE,
     SERVICE_REQUEST,
     GRIEVANCE,
     PERMIT,

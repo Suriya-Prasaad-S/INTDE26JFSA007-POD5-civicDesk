@@ -88,20 +88,32 @@ com.civicdesk
 │   ├── exception/  GlobalExceptionHandler + domain exceptions (401/403/404/409/400/423)
 │   ├── response/   ApiResponse (unified, with statusCode) · ErrorResponse · PageResponse
 │   └── util/       JwtUtil · NationalIdUtil · SecurityContextUtil · ClientIpUtil
-└── module/iam/
-    ├── controller/ AuthController · UserController · AuditLogController · DepartmentController
-    ├── service/    Auth / User / Audit / Department services (interface + impl)
-    ├── repository/  UserRepository · AuditLogRepository · DepartmentRepository
-    ├── entity/     User · AuditLog · Department
+├── module/iam/
+│   ├── controller/ AuthController · UserController · DepartmentController
+│   ├── service/    Auth / User / Department services (interface + impl)
+│   ├── repository/  UserRepository · DepartmentRepository
+│   ├── entity/     User · Department
+│   ├── dto/
+│   │   ├── request/   Register · CitizenLogin · StaffLogin · CreateUser · UpdateUserStatus
+│   │   └── response/  AuthResponse · UserResponse
+│   ├── enums/      Role · UserStatus
+│   └── security/   JwtAuthFilter
+└── module/auditlog/                         ← self-contained audit-log microservice module
+    ├── controller/ AuditLogController         (POST + GET /audit/auditLogs)
+    ├── service/    AuditService (interface + impl)
+    ├── repository/  AuditLogRepository · spec/AuditLogSpecifications
+    ├── entity/     AuditLog
     ├── dto/
-    │   ├── request/   Register · CitizenLogin · StaffLogin · CreateUser · UpdateUserStatus
-    │   └── response/  AuthResponse · UserResponse · AuditLogResponse
-    ├── enums/      Role · UserStatus · AuditAction · AuditModule  (share with team Day 1)
-    └── security/   JwtAuthFilter
+    │   ├── request/   CreateAuditLogRequest
+    │   └── response/  AuditLogResponse
+    ├── enums/      AuditAction · AuditModule  (share with team Day 1)
+    ├── validation/ EnumValid + EnumValidator  (reusable "value must be a known enum name")
+    └── client/     AuditClient  (other services POST audit entries through this)
 ```
 
 Teammates' modules (`citizen/`, `servicerequest/`, `permit/`, `grievance/`, `analytics/`)
-live as siblings under `module/`.
+live as siblings under `module/`. Audit log is already split out this way: `module/auditlog/`
+owns the `/audit` prefix and is consumed by IAM (and any module) only through `AuditService`.
 
 ## Base URL
 
@@ -113,15 +125,15 @@ http://localhost:8081/civicDesk/iam/...
 ```
 
 - `/civicDesk` — application-wide context path, shared by **every** module.
-- `/iam` — this module's prefix. Other modules own their own (`/grievance`, `/servicerequest`, …),
-  so they are **not** trapped under `/iam`.
+- `/iam` — this module's prefix. Other modules own their own (`/audit`, `/grievance`, `/servicerequest`, …),
+  so they are **not** trapped under `/iam`. The audit-log module already owns **`/audit`**.
 
 ## Roles
 
 `CIT` Citizen · `FO` Field Officer · `DS` Dept. Supervisor · `ENG` Engineer · `CO` Coordinator · `ADM` Admin.
 These exact codes are the `@PreAuthorize` and `users.role` contract — do not rename them.
 
-## Endpoints (11)
+## Endpoints (12)
 
 Paths below are shown after the `/civicDesk` context path. Full URL =
 `http://localhost:8081/civicDesk` + path.
@@ -137,7 +149,8 @@ Paths below are shown after the `/civicDesk` context path. Full URL =
 | POST   | `/iam/users`                 | `ADM` · `DS`      | `ADM` → creates `DS`; `DS` → creates `FO`/`ENG`/`CO` in own dept |
 | GET    | `/iam/users`                 | `ADM` · `DS`      | `ADM`: all users; `DS`: own dept, active only. Filters: `role`, `status`, `departmentId`, `page`, `size` |
 | PUT    | `/iam/users/{id}/status`     | `ADM`             | Activate / suspend / deactivate a user |
-| GET    | `/iam/auditLogs`             | `ADM` · `CO`      | Newest-first. Filters: `userId`, `action`, `module`, `page`, `size` |
+| POST   | `/audit/auditLogs`           | Authenticated     | Records an audit entry. Body: `userId`, `action`, `module` (enum-validated); IP resolved server-side → 201 |
+| GET    | `/audit/auditLogs`           | `ADM` · `CO`      | Newest-first. Filters: `userId`, `action`, `module`, `page`, `size` |
 | GET    | `/iam/departments`           | `ADM` · `DS`      | List departments (pick a valid `departmentId`) |
 
 **Example:** list all department supervisors in department `DPT03`:
@@ -208,11 +221,17 @@ public ResponseEntity<ApiResponse> example() {
 
 ### Template 2 — audit logging (create / update / delete)
 
+The audit log now lives in its own module (`module/auditlog/`). Other modules write
+entries the same way as before — by injecting `AuditService` — but the import is the
+new package. The IP is resolved server-side; you never pass it from the client.
+
 ```java
 import com.civicdesk.common.response.ApiResponse;
 import com.civicdesk.common.util.SecurityContextUtil;
 import com.civicdesk.common.util.ClientIpUtil;
-import com.civicdesk.module.iam.service.AuditService;
+import com.civicdesk.module.auditlog.enums.AuditAction;
+import com.civicdesk.module.auditlog.enums.AuditModule;
+import com.civicdesk.module.auditlog.service.AuditService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -230,11 +249,69 @@ public ResponseEntity<ApiResponse> create(
     myService.create(req, userId);
 
     // who did what, in which module, from which IP
-    auditService.log(userId, "CREATE_EXAMPLE", "EXAMPLE", ClientIpUtil.resolve(httpReq));
+    auditService.log(userId, AuditAction.CREATE_EXAMPLE.name(),
+                     AuditModule.EXAMPLE.name(), ClientIpUtil.resolve(httpReq));
 
     return ResponseEntity.status(201).body(ApiResponse.of("Created successfully", null));
 }
 ```
 
+> **In-process vs. over HTTP.** Inside the monolith, call `auditService.log(...)` (fire-and-forget,
+> returns `void`). When your module is split into its own service and audit becomes a remote
+> call, `POST /audit/auditLogs` is the same operation over HTTP — body `{ userId, action, module }`,
+> `action`/`module` validated against the enums, IP resolved by the audit service, returns the
+> created record (201).
+>
 > Prefer `AuditAction.X.name()` / `AuditModule.Y.name()` over raw strings — add your
-> action/module to those enums to keep audit values canonical across modules.
+> action/module to `com.civicdesk.module.auditlog.enums` to keep audit values canonical
+> across modules (the `POST` endpoint rejects any value not in those enums with a 400).
+
+### Template 3 — audit logging over HTTP (required for separate services)
+
+Because the audit log is now its own module (and on its way to its own deployable service),
+**every other service records audit entries by POSTing to `/audit/auditLogs`** rather than
+calling an in-process bean. Use the ready-made `AuditClient` — it builds the body, forwards
+the caller's JWT, and is best-effort (an audit failure is logged, never thrown, so it cannot
+break your business operation).
+
+```java
+import com.civicdesk.common.response.ApiResponse;
+import com.civicdesk.common.util.SecurityContextUtil;
+import com.civicdesk.module.auditlog.client.AuditClient;
+import com.civicdesk.module.auditlog.enums.AuditAction;
+import com.civicdesk.module.auditlog.enums.AuditModule;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+// Inject the client via the constructor: private final AuditClient auditClient;
+@PostMapping("/example")
+@PreAuthorize("hasRole('CIT')")
+public ResponseEntity<ApiResponse> create(
+        @Valid @RequestBody CreateExampleRequest req,
+        HttpServletRequest httpReq) {
+    String userId = SecurityContextUtil.getCurrentUserId();
+    myService.create(req, userId);
+
+    // Forward the caller's JWT so the audit service authenticates the same principal.
+    String authHeader = httpReq.getHeader(HttpHeaders.AUTHORIZATION);
+    auditClient.record(userId, AuditAction.CREATE_EXAMPLE, AuditModule.EXAMPLE, authHeader);
+
+    return ResponseEntity.status(201).body(ApiResponse.of("Created successfully", null));
+}
+```
+
+Point the client at the audit service with one property (defaults to this app):
+
+```properties
+# application.properties of the calling service
+app.audit.base-url=http://localhost:8081/civicDesk      # → POST {base-url}/audit/auditLogs
+```
+
+> **Which template do I use?** If your code lives *inside* the audit-owning deployment, the
+> in-process `AuditService.log(...)` (Template 2) is fine. A **separate** service must use
+> `AuditClient` (Template 3) — that is the supported cross-service contract.

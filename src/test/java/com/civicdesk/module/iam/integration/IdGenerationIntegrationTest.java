@@ -1,10 +1,10 @@
 package com.civicdesk.module.iam.integration;
 
 import com.civicdesk.module.iam.entity.User;
-import com.civicdesk.module.iam.repository.AuditLogRepository;
+import com.civicdesk.module.auditlog.repository.AuditLogRepository;
 import com.civicdesk.module.iam.repository.DepartmentRepository;
 import com.civicdesk.module.iam.repository.UserRepository;
-import com.civicdesk.module.iam.service.AuditService;
+import com.civicdesk.module.auditlog.service.AuditService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

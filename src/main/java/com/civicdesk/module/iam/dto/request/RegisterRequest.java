@@ -25,15 +25,14 @@ public class RegisterRequest {
             message = "phone must be a valid 10-digit Indian mobile number starting with 6-9")
     private String phone;
 
-    /** Optional. Format: YYYY-MM-DD. Validated only when provided. */
     @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "dateOfBirth must be in format YYYY-MM-DD")
     private String dateOfBirth;
 
-    /** Optional. MALE | FEMALE | OTHER. Validated only when provided. */
+  
     @Pattern(regexp = "(?i)MALE|FEMALE|OTHER", message = "gender must be MALE, FEMALE or OTHER")
     private String gender;
 
-    /** Optional. Aadhaar / Voter ID — SHA-256 hashed before use, never stored raw. Validated only when provided. */
+    
     @Pattern(regexp = "^[A-Za-z0-9]{6,20}$", message = "nationalId must be 6-20 alphanumeric characters")
     private String nationalId;
 

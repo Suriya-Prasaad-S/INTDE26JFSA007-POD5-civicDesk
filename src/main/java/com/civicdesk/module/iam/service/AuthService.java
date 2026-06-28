@@ -14,6 +14,5 @@ public interface AuthService {
 
     AuthResponse staffLogin(StaffLoginRequest req, String ip);
 
-    /** First-time password setup for an admin-created account. Usable once per account. */
     void setPassword(SetPasswordRequest req);
 }

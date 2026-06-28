@@ -1,6 +1,6 @@
-package com.civicdesk.module.iam.repository.spec;
+package com.civicdesk.module.auditlog.repository.spec;
 
-import com.civicdesk.module.iam.entity.AuditLog;
+import com.civicdesk.module.auditlog.entity.AuditLog;
 import org.springframework.data.jpa.domain.Specification;
 
 /**

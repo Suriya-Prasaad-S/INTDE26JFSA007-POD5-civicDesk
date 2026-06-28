@@ -53,22 +53,22 @@ public class UserServiceImpl implements UserService {
             throw new DuplicateEmailException("Email already exists");
         }
 
-        // Department the new supervisor will head (only set on the ADM path).
+        
         Department supervisorDepartment = null;
 
         if (Role.ADM.name().equals(callerRole)) {
-            // Admin may only mint department supervisors.
+            
             if (!Role.DS.name().equals(req.getRole())) {
                 throw new ForbiddenException("Admin can only create DS");
             }
-            // A supervisor must be tied to a department that actually exists.
+            
             if (req.getDepartmentId() == null || req.getDepartmentId().isBlank()) {
                 throw new BadRequestException("departmentId is required when creating a DS");
             }
             supervisorDepartment = departmentRepository.findById(req.getDepartmentId())
                     .orElseThrow(() -> new BadRequestException("Department does not exist"));
         } else if (Role.DS.name().equals(callerRole)) {
-            // Supervisor may only create field staff, always within their own department.
+            
             if (!SUPERVISOR_CREATABLE_ROLES.contains(req.getRole())) {
                 throw new ForbiddenException("Supervisor cannot create " + req.getRole());
             }
@@ -80,7 +80,7 @@ public class UserServiceImpl implements UserService {
             throw new ForbiddenException("Not allowed to create users");
         }
 
-        // Admin-created staff start with NO password; the owner sets it on first login.
+        
         User user = new User();
         user.setName(req.getName());
         user.setEmail(req.getEmail());
@@ -92,7 +92,6 @@ public class UserServiceImpl implements UserService {
         user.setPasswordSet(false);
         userRepository.save(user);
 
-        // One-to-one: point the department back at its newly assigned supervisor.
         if (supervisorDepartment != null) {
             supervisorDepartment.setDepartmentSupervisorId(user.getUserId());
             departmentRepository.save(supervisorDepartment);
@@ -116,8 +115,6 @@ public class UserServiceImpl implements UserService {
                                                int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
 
-        // Optional, caller-supplied filters. Validate up front so a bad value is a 400,
-        // not a silently-empty page.
         Specification<User> spec = Specification.where(null);
         String role = normalizeRoleFilter(roleFilter);
         if (role != null) {
@@ -125,20 +122,17 @@ public class UserServiceImpl implements UserService {
         }
 
         if (Role.ADM.name().equals(callerRole)) {
-            // Admin sees every account; the optional status filter (if any) applies as-is.
+           
             String status = normalizeStatusFilter(statusFilter);
             if (status != null) {
                 spec = spec.and(UserSpecifications.hasStatus(status));
             }
-            // Admin may narrow the listing to a single department.
+           
             if (departmentIdFilter != null && !departmentIdFilter.isBlank()) {
                 spec = spec.and(UserSpecifications.inDepartment(departmentIdFilter.trim()));
             }
         } else if (Role.DS.name().equals(callerRole)) {
-            // Supervisor is always scoped to their own department and to active staff only;
-            // inactive/suspended accounts are never exposed to them, so any status filter is
-            // ignored in favour of the ACT guard, and any caller-supplied departmentId is
-            // ignored in favour of the caller's own department.
+
             String deptId = userRepository.findById(callerUserId)
                     .map(User::getDepartmentId)
                     .orElseThrow(() -> new ForbiddenException("Caller has no department"));
@@ -152,7 +146,7 @@ public class UserServiceImpl implements UserService {
         return PageResponse.from(users, UserResponse::from);
     }
 
-    /** Validates the optional {@code role} query param against {@link Role}; null/blank means "no filter". */
+ 
     private String normalizeRoleFilter(String roleFilter) {
         if (roleFilter == null || roleFilter.isBlank()) {
             return null;
@@ -166,7 +160,7 @@ public class UserServiceImpl implements UserService {
         throw new BadRequestException("Invalid role: " + roleFilter);
     }
 
-    /** Maps the optional {@code status} query param to its canonical label; null/blank means "no filter". */
+    
     private String normalizeStatusFilter(String statusFilter) {
         if (statusFilter == null || statusFilter.isBlank()) {
             return null;

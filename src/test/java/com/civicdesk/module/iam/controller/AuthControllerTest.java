@@ -17,7 +17,7 @@ import com.civicdesk.module.iam.dto.request.CitizenLoginRequest;
 import com.civicdesk.module.iam.dto.request.RegisterRequest;
 import com.civicdesk.module.iam.dto.response.AuthResponse;
 import com.civicdesk.module.iam.security.JwtAuthFilter;
-import com.civicdesk.module.iam.service.AuditService;
+import com.civicdesk.module.auditlog.service.AuditService;
 import com.civicdesk.module.iam.service.AuthService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 

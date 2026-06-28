@@ -1,14 +1,14 @@
 package com.civicdesk.config;
 
+import com.civicdesk.module.auditlog.enums.AuditAction;
+import com.civicdesk.module.auditlog.enums.AuditModule;
+import com.civicdesk.module.auditlog.service.AuditService;
 import com.civicdesk.module.iam.entity.Department;
 import com.civicdesk.module.iam.entity.User;
-import com.civicdesk.module.iam.enums.AuditAction;
-import com.civicdesk.module.iam.enums.AuditModule;
 import com.civicdesk.module.iam.enums.Role;
 import com.civicdesk.module.iam.enums.UserStatus;
 import com.civicdesk.module.iam.repository.DepartmentRepository;
 import com.civicdesk.module.iam.repository.UserRepository;
-import com.civicdesk.module.iam.service.AuditService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

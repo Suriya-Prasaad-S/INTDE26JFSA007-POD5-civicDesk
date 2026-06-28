@@ -5,15 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/**
- * A municipal department. A user with role DS is assigned to one
- * department, and that department points back to its supervisor (one-to-one)
- * via {@code department_supervisor_id}.
- *
- * <p>The id is a human-readable business key in the form {@code DPT01}, {@code DPT02}, …
- * assigned by {@code DataSeeder} (the only creator of departments) rather than a
- * generated UUID.
- */
 @Entity
 @Table(name = "departments")
 public class Department {
@@ -25,7 +16,6 @@ public class Department {
     @Column(nullable = false, unique = true, length = 100)
     private String name;
 
-    /** userId of the DS who heads this department; null until one is assigned. */
     @Column(name = "departmentSupervisorId", length = 36)
     private String departmentSupervisorId;
 

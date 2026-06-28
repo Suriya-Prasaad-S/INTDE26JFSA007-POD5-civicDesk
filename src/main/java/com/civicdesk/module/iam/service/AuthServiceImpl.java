@@ -13,10 +13,11 @@ import com.civicdesk.module.iam.dto.request.CitizenLoginRequest;
 import com.civicdesk.module.iam.dto.request.RegisterRequest;
 import com.civicdesk.module.iam.dto.request.SetPasswordRequest;
 import com.civicdesk.module.iam.dto.request.StaffLoginRequest;
+import com.civicdesk.module.auditlog.enums.AuditAction;
+import com.civicdesk.module.auditlog.enums.AuditModule;
+import com.civicdesk.module.auditlog.service.AuditService;
 import com.civicdesk.module.iam.dto.response.AuthResponse;
 import com.civicdesk.module.iam.entity.User;
-import com.civicdesk.module.iam.enums.AuditAction;
-import com.civicdesk.module.iam.enums.AuditModule;
 import com.civicdesk.module.iam.enums.Role;
 import com.civicdesk.module.iam.enums.UserStatus;
 import com.civicdesk.module.iam.repository.UserRepository;
@@ -57,14 +58,12 @@ public class AuthServiceImpl implements AuthService {
         user.setName(req.getName());
         user.setEmail(req.getEmail());
         user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
-        user.setPasswordSet(true); // citizens choose their password at registration
+        user.setPasswordSet(true); 
         user.setPhone(req.getPhone());
         user.setRole(Role.CIT.name());
         user.setStatus(UserStatus.ACT.getLabel());
         userRepository.save(user);
 
-        // Extended citizen-profile fields (DOB, nationalId, address, ward, zone)
-        // belong to the Citizen module (2.2); IAM only owns the User identity.
         auditService.log(user.getUserId(), AuditAction.REGISTER.name(), AuditModule.IAM.name(), ip);
     }
 
@@ -86,12 +85,12 @@ public class AuthServiceImpl implements AuthService {
         return issueToken(user, ip);
     }
 
-    /** Verifies email + password, enforcing first-time password setup and allowing only Active accounts (rejects suspended and inactive). */
+   
     private User authenticate(String email, String password) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
 
-        // Admin-created accounts must set their own password before they can log in.
+        
         if (!user.isPasswordSet()) {
             throw new PasswordNotSetException("Please set your password before logging in");
         }
@@ -100,11 +99,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BadCredentialsException("Invalid email or password");
         }
 
-        // Only Active accounts may log in. Normalize the stored status first so a
-        // value persisted in any accepted form ("A"/"ACT"/"ACTIVE", any case) is
-        // recognised as active — comparing the raw value against "A" alone would
-        // wrongly reject an active account as inactive. Branch on the specific
-        // state so the client gets a distinct message for suspended vs inactive.
+
         String status = UserStatus.normalize(user.getStatus());
         if (UserStatus.SUS.getLabel().equals(status)) {
             throw new AccountSuspendedException("Account suspended contact admin");

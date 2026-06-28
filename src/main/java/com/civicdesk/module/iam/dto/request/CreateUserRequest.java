@@ -25,10 +25,7 @@ public class CreateUserRequest {
     @Pattern(regexp = "DS|FO|ENG|CO", message = "role must be one of: DS, FO, ENG, CO")
     private String role;
 
-    /**
-     * Required when ADM creates a DS. For a DS
-     * caller it is ignored and overwritten with the supervisor's own department.
-     */
+
     private String departmentId;
 
     public String getName() {

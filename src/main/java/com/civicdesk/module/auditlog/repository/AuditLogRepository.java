@@ -1,6 +1,6 @@
-package com.civicdesk.module.iam.repository;
+package com.civicdesk.module.auditlog.repository;
 
-import com.civicdesk.module.iam.entity.AuditLog;
+import com.civicdesk.module.auditlog.entity.AuditLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

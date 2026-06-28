@@ -1,6 +1,6 @@
-package com.civicdesk.module.iam.dto.response;
+package com.civicdesk.module.auditlog.dto.response;
 
-import com.civicdesk.module.iam.entity.AuditLog;
+import com.civicdesk.module.auditlog.entity.AuditLog;
 
 import java.time.LocalDateTime;
 

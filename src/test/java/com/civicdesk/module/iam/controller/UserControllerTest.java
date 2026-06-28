@@ -3,7 +3,7 @@ package com.civicdesk.module.iam.controller;
 import com.civicdesk.module.iam.dto.request.CreateUserRequest;
 import com.civicdesk.module.iam.dto.response.UserResponse;
 import com.civicdesk.module.iam.security.JwtAuthFilter;
-import com.civicdesk.module.iam.service.AuditService;
+import com.civicdesk.module.auditlog.service.AuditService;
 import com.civicdesk.module.iam.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

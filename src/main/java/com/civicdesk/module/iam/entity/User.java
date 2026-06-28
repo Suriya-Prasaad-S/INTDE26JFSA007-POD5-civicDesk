@@ -14,8 +14,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
-// columnList values match the physical (camelCase) column names — this project uses
-// PhysicalNamingStrategyStandardImpl, so columns are NOT snake_cased.
 @Entity
 @Table(name = "users", indexes = {
     @Index(name = "idx_users_role",        columnList = "role"),
@@ -24,7 +22,6 @@ import java.time.LocalDateTime;
 })
 public class User {
 
-    // Sequential numeric id rendered as a String: 10000001, 10000002, … (was a UUID).
     @Id
     @GeneratedValue(generator = "userIdSeq")
     @GenericGenerator(
@@ -45,11 +42,9 @@ public class User {
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
-    /** Null until the user sets a password (admin-created accounts start with no password). */
     @Column(name = "passwordHash", length = 255)
     private String passwordHash;
 
-    /** False for admin-created accounts until the owner sets their own password on first login. */
     @Column(name = "isPasswordSet", nullable = false)
     private boolean passwordSet = false;
 
