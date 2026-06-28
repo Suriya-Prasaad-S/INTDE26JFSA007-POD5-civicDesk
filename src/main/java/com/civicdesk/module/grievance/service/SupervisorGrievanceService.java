@@ -27,6 +27,8 @@ import com.civicdesk.module.iam.enums.Role;
 import com.civicdesk.module.iam.enums.UserStatus;
 import com.civicdesk.module.iam.repository.UserRepository;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * Department-supervisor (DS) grievance operations: view the department queue,
  * assign/reassign a field officer, resolve, and view one grievance. A supervisor
@@ -35,6 +37,7 @@ import com.civicdesk.module.iam.repository.UserRepository;
  * supervisor's department and to validate a chosen field officer.
  */
 @Service
+@Slf4j
 public class SupervisorGrievanceService {
 
     private final GrievanceRepo grievanceRepo;
@@ -56,6 +59,7 @@ public class SupervisorGrievanceService {
     @Transactional(readOnly = true)
     public List<GrievanceSummaryResponse> getDepartmentGrievances() {
         String deptId = supervisorDepartmentId();
+        log.info("Testing the logging...");
         return grievanceRepo.findByDepartmentId(deptId)
                 .stream().map(mapper::toSummary).toList();
     }
