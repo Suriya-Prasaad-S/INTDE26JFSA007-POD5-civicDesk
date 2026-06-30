@@ -3,6 +3,9 @@ package com.civicdesk.module.serviceRequest.service;
 import com.civicdesk.common.exception.BadRequestException;
 import com.civicdesk.common.exception.ResourceNotFoundException;
 import com.civicdesk.common.exception.UnprocessableEntityException;
+import com.civicdesk.module.notification.dto.request.NotificationRequestDTO;
+import com.civicdesk.module.notification.entity.enums.Category;
+import com.civicdesk.module.notification.service.NotificationService;
 import com.civicdesk.module.serviceRequest.dto.request.VerifyDocumentRequest;
 import com.civicdesk.module.serviceRequest.dto.response.DocumentItemResponse;
 import com.civicdesk.module.serviceRequest.dto.response.MessageResponse;
@@ -31,13 +34,16 @@ public class DocumentService {
     private final RequestDocumentRepository documentRepository;
     private final ServiceRequestRepository requestRepository;
     private final FileStorageService fileStorageService;
+    private final NotificationService notificationService;
 
     public DocumentService(RequestDocumentRepository documentRepository,
                            ServiceRequestRepository requestRepository,
-                           FileStorageService fileStorageService) {
+                           FileStorageService fileStorageService,
+                           NotificationService notificationService) {
         this.documentRepository = documentRepository;
         this.requestRepository = requestRepository;
         this.fileStorageService = fileStorageService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -68,6 +74,12 @@ public class DocumentService {
         document.setVerificationStatus(VerificationStatus.Pending);
 
         documentRepository.save(document);
+
+        String message = "Your document has been uploaded and is pending officer verification.";
+        notificationService.createNotification(new NotificationRequestDTO(
+                request.getCitizen().getUserId(),
+                message,
+                Category.ServiceRequest));
 
         return new MessageResponse(
                 "Document uploaded successfully. Document is pending officer verification.");
@@ -110,10 +122,24 @@ public class DocumentService {
             ServiceRequest parent = document.getRequest();
             parent.setStatus(RequestStatus.PendingDocuments);
             requestRepository.save(parent);
+
+            String message = "Your document has been rejected. Your service request " + parent.getRequestId()
+                    + " requires additional documents. Please upload the requested documents to continue.";
+            notificationService.createNotification(new NotificationRequestDTO(
+                    parent.getCitizen().getUserId(),
+                    message,
+                    Category.ServiceRequest));
+
             return new MessageResponse(
                     "Document rejected. Document status has been set to Rejected. Request has been "
                             + "moved to PendingDocuments. Citizen has been notified to re-upload.");
         }
+
+        String message = "Your document has been verified and accepted.";
+        notificationService.createNotification(new NotificationRequestDTO(
+                document.getRequest().getCitizen().getUserId(),
+                message,
+                Category.ServiceRequest));
 
         return new MessageResponse(
                 "Document verified successfully. Document status has been updated to Verified.");

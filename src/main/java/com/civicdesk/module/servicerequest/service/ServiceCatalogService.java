@@ -2,6 +2,9 @@ package com.civicdesk.module.serviceRequest.service;
 
 import com.civicdesk.common.exception.ConflictException;
 import com.civicdesk.common.exception.ResourceNotFoundException;
+import com.civicdesk.module.notification.dto.request.NotificationRequestDTO;
+import com.civicdesk.module.notification.entity.enums.Category;
+import com.civicdesk.module.notification.service.NotificationService;
 import com.civicdesk.module.serviceRequest.dto.request.CreateServiceRequest;
 import com.civicdesk.module.serviceRequest.dto.request.UpdateServiceRequest;
 import com.civicdesk.module.serviceRequest.dto.response.MessageResponse;
@@ -16,6 +19,8 @@ import com.civicdesk.module.serviceRequest.repository.ServiceCatalogRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -30,16 +35,21 @@ import java.util.UUID;
 @Service
 public class ServiceCatalogService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ServiceCatalogService.class);
+
     private final ServiceCatalogRepository catalogRepository;
     private final DepartmentRepository departmentRepository;
     private final ObjectMapper objectMapper;
+    private final NotificationService notificationService;
 
     public ServiceCatalogService(ServiceCatalogRepository catalogRepository,
                                  DepartmentRepository departmentRepository,
-                                 ObjectMapper objectMapper) {
+                                 ObjectMapper objectMapper,
+                                 NotificationService notificationService) {
         this.catalogRepository = catalogRepository;
         this.departmentRepository = departmentRepository;
         this.objectMapper = objectMapper;
+        this.notificationService = notificationService;
     }
 
     public MessageResponse createService(CreateServiceRequest request) {
@@ -64,6 +74,15 @@ public class ServiceCatalogService {
         service.setStatus(ServiceStatus.Active);
 
         catalogRepository.save(service);
+        LOGGER.info("Service {} created successfully", service.getServiceId());
+
+        String message = "A new service '" + service.getServiceName()
+                + "' has been added to the catalog and is now available for citizens.";
+        notificationService.createNotification(new NotificationRequestDTO(
+                department.getDepartmentId(),
+                message,
+                Category.ServiceRequest));
+        LOGGER.info("Notification created for new service {}", service.getServiceId());
 
         return new MessageResponse(
                 "Service created successfully. New service has been added to the catalog.");
@@ -98,6 +117,15 @@ public class ServiceCatalogService {
         service.setStatus(request.status());
 
         catalogRepository.save(service);
+        LOGGER.info("Service {} updated successfully", serviceId);
+
+        String message = "Service '" + service.getServiceName() + "' has been updated. "
+                + "Status is now " + service.getStatus() + ".";
+        notificationService.createNotification(new NotificationRequestDTO(
+                service.getDepartment().getDepartmentId(),
+                message,
+                Category.ServiceRequest));
+        LOGGER.info("Notification created for updated service {}", serviceId);
 
         return new MessageResponse("Service updated successfully.");
     }
