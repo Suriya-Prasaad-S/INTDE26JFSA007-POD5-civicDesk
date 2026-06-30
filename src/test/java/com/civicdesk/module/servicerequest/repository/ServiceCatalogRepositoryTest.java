@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Slice tests for {@link ServiceCatalogRepository} derived queries.
  */
 @DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 class ServiceCatalogRepositoryTest {
 
     @Autowired private TestEntityManager em;

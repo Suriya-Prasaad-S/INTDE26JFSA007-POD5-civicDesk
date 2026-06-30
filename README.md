@@ -69,3 +69,7 @@ And the matching test layout under `src/test/java/com/civicdesk/module/<name>/`:
 - Keep secrets out of the shared `application.properties`; use environment variables on
   your branch/deploy.
 - Stack: Java 21, Spring Boot 3.4.x, Spring Security 6 (versions pinned in `pom.xml`).
+
+## Module documentation
+- The Notification module integration guide is in `docs/notification-module.md`.
+- Concrete consumer examples are in `docs/examples.md`.

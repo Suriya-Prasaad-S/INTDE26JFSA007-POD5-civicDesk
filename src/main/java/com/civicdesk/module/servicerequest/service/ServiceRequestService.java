@@ -2,6 +2,9 @@ package com.civicdesk.module.serviceRequest.service;
 
 import com.civicdesk.common.exception.ResourceNotFoundException;
 import com.civicdesk.common.exception.UnprocessableEntityException;
+import com.civicdesk.module.notification.dto.request.NotificationRequestDTO;
+import com.civicdesk.module.notification.entity.enums.Category;
+import com.civicdesk.module.notification.service.NotificationService;
 import com.civicdesk.module.serviceRequest.dto.request.SubmitServiceRequest;
 import com.civicdesk.module.serviceRequest.dto.request.UpdateRequestStatusRequest;
 import com.civicdesk.module.serviceRequest.dto.response.CitizenRequestItemResponse;
@@ -19,6 +22,8 @@ import com.civicdesk.module.serviceRequest.entity.external.User;
 import com.civicdesk.module.serviceRequest.repository.RequestDocumentRepository;
 import com.civicdesk.module.serviceRequest.repository.ServiceCatalogRepository;
 import com.civicdesk.module.serviceRequest.repository.ServiceRequestRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -39,30 +44,35 @@ import java.util.stream.Collectors;
 @Service
 public class ServiceRequestService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ServiceRequestService.class);
+
     private final ServiceRequestRepository requestRepository;
     private final ServiceCatalogRepository catalogRepository;
     private final RequestDocumentRepository documentRepository;
     private final CitizenLookup citizenLookup;
     private final OfficerAssignment officerAssignment;
+    private final NotificationService notificationService;
 
     public ServiceRequestService(ServiceRequestRepository requestRepository,
                                  ServiceCatalogRepository catalogRepository,
                                  RequestDocumentRepository documentRepository,
                                  CitizenLookup citizenLookup,
-                                 OfficerAssignment officerAssignment) {
+                                 OfficerAssignment officerAssignment,
+                                 NotificationService notificationService) {
         this.requestRepository = requestRepository;
         this.catalogRepository = catalogRepository;
         this.documentRepository = documentRepository;
         this.citizenLookup = citizenLookup;
         this.officerAssignment = officerAssignment;
+        this.notificationService = notificationService;
     }
 
     @Transactional
     public MessageResponse submitRequest(SubmitServiceRequest request) {
-        // 1. Citizen must exist and not be flagged.
+        LOGGER.info("Submitting service request for citizen {} and service {}", request.citizenId(), request.serviceId());
+
         CitizenProfile citizen = citizenLookup.loadSubmittableCitizen(request.citizenId());
 
-        // 2. Service must exist and be Active.
         ServiceCatalog service = catalogRepository.findById(request.serviceId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Service with ID " + request.serviceId() + " does not exist"));
@@ -71,7 +81,6 @@ public class ServiceRequestService {
                     "The selected service is currently Inactive and not accepting new requests.");
         }
 
-        // 3. Snapshot fee + compute completion date + auto-assign officer.
         LocalDate submissionDate = LocalDate.now();
         User officer = officerAssignment.findLeastLoadedOfficer(service.getDepartment().getDepartmentId());
 
@@ -86,15 +95,21 @@ public class ServiceRequestService {
         serviceRequest.setStatus(RequestStatus.Submitted);
 
         requestRepository.save(serviceRequest);
+        LOGGER.info("Service request {} saved successfully", serviceRequest.getRequestId());
 
-        String message = "Service request submitted successfully. Your request has been received "
-                + "and assigned to an officer. Expected completion date is "
+        String message = "Your service request " + serviceRequest.getRequestId()
+                + " has been submitted and assigned to an officer. Expected completion date is "
                 + service.getProcessingDays() + " working days from today.";
+
+        notificationService.createNotification(new NotificationRequestDTO(
+                citizen.getUserId(),
+                message,
+                Category.ServiceRequest));
+        LOGGER.info("Notification created for service request {}", serviceRequest.getRequestId());
 
         return new MessageResponse(message);
     }
 
-    /** The request queue, optionally filtered by status and/or department (getAllRequests). */
     @Transactional(readOnly = true)
     public List<RequestListItemResponse> getAllRequests(RequestStatus status, String departmentId) {
         boolean hasDept = StringUtils.hasText(departmentId);
@@ -111,7 +126,6 @@ public class ServiceRequestService {
         return requests.stream().map(this::toListItem).toList();
     }
 
-    /** Full details of one request including its uploaded documents (getRequest). */
     @Transactional(readOnly = true)
     public RequestDetailResponse getRequest(String requestId) {
         ServiceRequest request = requestRepository.findById(requestId)
@@ -131,7 +145,6 @@ public class ServiceRequestService {
                 documents);
     }
 
-    /** All requests submitted by one citizen, for their personal tracker (getRequestsByCitizen). */
     @Transactional(readOnly = true)
     public List<CitizenRequestItemResponse> getRequestsByCitizen(String citizenId) {
         return requestRepository.findByCitizen_CitizenId(citizenId).stream()
@@ -143,7 +156,6 @@ public class ServiceRequestService {
                 .toList();
     }
 
-    /** Transition a request to the next valid status, enforcing the workflow (updateRequestStatus). */
     @Transactional
     public MessageResponse updateRequestStatus(String requestId, UpdateRequestStatusRequest request) {
         ServiceRequest serviceRequest = requestRepository.findById(requestId)
@@ -167,9 +179,28 @@ public class ServiceRequestService {
 
         serviceRequest.setStatus(next);
         requestRepository.save(serviceRequest);
+        LOGGER.info("Request {} status updated to {}", requestId, next);
+
+        String notificationMessage = buildStatusNotificationMessage(requestId, next);
+        notificationService.createNotification(new NotificationRequestDTO(
+                serviceRequest.getCitizen().getUserId(),
+                notificationMessage,
+                Category.ServiceRequest));
+        LOGGER.info("Notification created for request {} after status update", requestId);
 
         return new MessageResponse(
                 "Request status updated successfully. Status has been moved to " + next + ".");
+    }
+
+    private String buildStatusNotificationMessage(String requestId, RequestStatus next) {
+        return switch (next) {
+            case UnderReview -> "Your service request " + requestId + " is now under review.";
+            case PendingDocuments -> "Your service request " + requestId + " requires additional documents. Please upload the requested documents to continue.";
+            case Approved -> "Your service request " + requestId + " has been approved.";
+            case Rejected -> "Your service request " + requestId + " has been rejected.";
+            case Completed -> "Your service request " + requestId + " has been completed.";
+            default -> "Your service request " + requestId + " status has been updated to " + next + ".";
+        };
     }
 
     private RequestListItemResponse toListItem(ServiceRequest r) {

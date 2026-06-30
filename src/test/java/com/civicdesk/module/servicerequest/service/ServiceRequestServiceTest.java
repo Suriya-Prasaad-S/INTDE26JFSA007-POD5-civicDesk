@@ -19,6 +19,9 @@ import com.civicdesk.module.serviceRequest.entity.enums.VerificationStatus;
 import com.civicdesk.module.serviceRequest.entity.external.CitizenProfile;
 import com.civicdesk.module.serviceRequest.entity.external.Department;
 import com.civicdesk.module.serviceRequest.entity.external.User;
+import com.civicdesk.module.notification.dto.request.NotificationRequestDTO;
+import com.civicdesk.module.notification.entity.enums.Category;
+import com.civicdesk.module.notification.service.NotificationService;
 import com.civicdesk.module.serviceRequest.repository.RequestDocumentRepository;
 import com.civicdesk.module.serviceRequest.repository.ServiceCatalogRepository;
 import com.civicdesk.module.serviceRequest.repository.ServiceRequestRepository;
@@ -58,6 +61,7 @@ class ServiceRequestServiceTest {
     @Mock private RequestDocumentRepository documentRepository;
     @Mock private CitizenLookup citizenLookup;
     @Mock private OfficerAssignment officerAssignment;
+    @Mock private NotificationService notificationService;
 
     @InjectMocks private ServiceRequestService service;
 
@@ -113,6 +117,7 @@ class ServiceRequestServiceTest {
             assertThat(saved.getExpectedCompletionDate())
                     .isEqualTo(LocalDate.now().plusDays(7));
             assertThat(response.message()).contains("7 working days");
+            verify(notificationService).createNotification(any());
         }
 
         @Test
@@ -268,6 +273,13 @@ class ServiceRequestServiceTest {
             assertThat(request.getStatus()).isEqualTo(RequestStatus.UnderReview);
             assertThat(response.message()).contains("UnderReview");
             verify(requestRepository).save(request);
+
+            ArgumentCaptor<NotificationRequestDTO> notificationCaptor = ArgumentCaptor.forClass(NotificationRequestDTO.class);
+            verify(notificationService).createNotification(notificationCaptor.capture());
+            NotificationRequestDTO notification = notificationCaptor.getValue();
+            assertThat(notification.userId()).isEqualTo("USR-1");
+            assertThat(notification.category()).isEqualTo(Category.ServiceRequest);
+            assertThat(notification.message()).contains("now under review");
         }
 
         @Test
