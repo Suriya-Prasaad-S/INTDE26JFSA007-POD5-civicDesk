@@ -10,7 +10,10 @@ import com.civicdesk.module.serviceRequest.repository.CitizenProfileRepository;
 import com.civicdesk.module.serviceRequest.repository.DepartmentRepository;
 import com.civicdesk.module.serviceRequest.repository.ServiceCatalogRepository;
 import com.civicdesk.module.serviceRequest.repository.UserRepository;
+import org.slf4j.Logger;
+import com.civicdesk.common.util.AppLogger;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -30,6 +33,8 @@ import java.util.List;
  */
 @Component
 public class DummyDataSeeder implements CommandLineRunner {
+
+    private static final Logger LOG = AppLogger.getLogger(DummyDataSeeder.class);
 
     private final DepartmentRepository departmentRepository;
     private final UserRepository userRepository;
@@ -58,9 +63,15 @@ public class DummyDataSeeder implements CommandLineRunner {
         if (departmentRepository.count() > 0) {
             return;
         }
-        departmentRepository.saveAll(List.of(
-                new Department("dept-0004", "Citizen Services", "citizenservices@civicdesk.gov"),
-                new Department("dept-0002", "Public Works", "publicworks@civicdesk.gov")));
+        try {
+            departmentRepository.saveAll(List.of(
+                    new Department("dept-0004", "Citizen Services", "citizenservices@civicdesk.gov"),
+                    new Department("dept-0002", "Public Works", "publicworks@civicdesk.gov")));
+        } catch (DataAccessException ex) {
+            LOG.warn("Skipping department seeding: database schema not compatible or insert failed", ex);
+            // Don't rethrow — allow application startup to continue. Catalog seeding already
+            // checks for presence of departments and will skip if they are not present.
+        }
     }
 
     private void seedUsers() {
@@ -90,8 +101,13 @@ public class DummyDataSeeder implements CommandLineRunner {
         if (catalogRepository.count() > 0) {
             return;
         }
-        Department citizenServices = departmentRepository.findById("dept-0004").orElseThrow();
-        Department publicWorks = departmentRepository.findById("dept-0002").orElseThrow();
+        Department citizenServices = departmentRepository.findById("dept-0004").orElse(null);
+        Department publicWorks = departmentRepository.findById("dept-0002").orElse(null);
+
+        if (citizenServices == null || publicWorks == null) {
+            // Required placeholder departments are not present in the DB; skip catalog seeding.
+            return;
+        }
 
         catalogRepository.saveAll(List.of(
                 catalogService("svc-0001", "Birth Certificate", citizenServices, ServiceCategory.Certificate,
@@ -99,7 +115,17 @@ public class DummyDataSeeder implements CommandLineRunner {
                 catalogService("svc-0002", "Income Certificate", citizenServices, ServiceCategory.Certificate,
                         10, "[\"NationalID\",\"SalarySlip\",\"ResidenceProof\"]", "100.00", ServiceStatus.Active),
                 catalogService("svc-0003", "Drainage Connection", publicWorks, ServiceCategory.Utility,
-                        14, "[\"NationalID\",\"ResidenceProof\",\"SiteMap\"]", "750.00", ServiceStatus.Inactive)));
+                        14, "[\"NationalID\",\"ResidenceProof\",\"SiteMap\"]", "750.00", ServiceStatus.Active),
+                catalogService("svc-0004", "New Water Supply", publicWorks, ServiceCategory.Utility,
+                        14, "[\"NationalID\",\"ResidenceProof\",\"SiteMap\"]", "850.00", ServiceStatus.Active),
+                catalogService("svc-0005", "Voter ID", citizenServices, ServiceCategory.Registration,
+                        7, "[\"NationalID\",\"AddressProof\"]", "50.00", ServiceStatus.Active),
+                catalogService("svc-0006", "Ration Card", citizenServices, ServiceCategory.Registration,
+                        10, "[\"NationalID\",\"AddressProof\"]", "35.00", ServiceStatus.Active),
+                catalogService("svc-0007", "Old Age Pension", citizenServices, ServiceCategory.Welfare,
+                        21, "[\"NationalID\",\"AgeProof\"]", "0.00", ServiceStatus.Active),
+                catalogService("svc-0008", "Scholarship", citizenServices, ServiceCategory.Welfare,
+                        30, "[\"NationalID\",\"SchoolCertificate\"]", "0.00", ServiceStatus.Active)));
     }
 
     private ServiceCatalog catalogService(String id, String name, Department department,

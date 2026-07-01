@@ -2,13 +2,17 @@ package com.civicdesk.module.serviceRequest.service;
 
 import com.civicdesk.common.exception.ResourceNotFoundException;
 import com.civicdesk.common.exception.UnprocessableEntityException;
+import com.civicdesk.module.serviceRequest.dto.request.ServiceRequestAnalyticsRequest;
 import com.civicdesk.module.serviceRequest.dto.request.SubmitServiceRequest;
 import com.civicdesk.module.serviceRequest.dto.request.UpdateRequestStatusRequest;
 import com.civicdesk.module.serviceRequest.dto.response.CitizenRequestItemResponse;
+import com.civicdesk.module.serviceRequest.dto.response.DateCount;
+import com.civicdesk.module.serviceRequest.dto.response.LabelCount;
 import com.civicdesk.module.serviceRequest.dto.response.DocumentItemResponse;
 import com.civicdesk.module.serviceRequest.dto.response.MessageResponse;
 import com.civicdesk.module.serviceRequest.dto.response.RequestDetailResponse;
 import com.civicdesk.module.serviceRequest.dto.response.RequestListItemResponse;
+import com.civicdesk.module.serviceRequest.dto.response.ServiceRequestAnalyticsResponse;
 import com.civicdesk.module.serviceRequest.entity.RequestDocument;
 import com.civicdesk.module.serviceRequest.entity.ServiceCatalog;
 import com.civicdesk.module.serviceRequest.entity.ServiceRequest;
@@ -24,6 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -170,6 +176,51 @@ public class ServiceRequestService {
 
         return new MessageResponse(
                 "Request status updated successfully. Status has been moved to " + next + ".");
+    }
+
+    @Transactional(readOnly = true)
+    public ServiceRequestAnalyticsResponse getServiceRequestAnalytics(ServiceRequestAnalyticsRequest request) {
+        LocalDate fromDate = request.fromDate() == null ? null : request.fromDate().toLocalDate();
+        LocalDate toDate = request.toDate() == null ? null : request.toDate().toLocalDate();
+
+        long totalRequests = requestRepository.countRequests(request.deptId(), fromDate, toDate);
+        long overdueRequests = requestRepository.countOverdueRequests(request.deptId(), fromDate, toDate, LocalDate.now());
+
+        var statusMap = Arrays.stream(RequestStatus.values())
+                .collect(Collectors.toMap(
+                        status -> status,
+                        status -> 0L,
+                        (a, b) -> a,
+                        LinkedHashMap::new));
+        requestRepository.getStatusBreakdown(request.deptId(), fromDate, toDate)
+                .forEach(row -> statusMap.put((RequestStatus) row[0], (Long) row[1]));
+        List<LabelCount> statusBreakdown = statusMap.entrySet().stream()
+                .map(entry -> new LabelCount(entry.getKey().name(), entry.getValue()))
+                .toList();
+
+        var serviceMap = catalogRepository.findByStatus(ServiceStatus.Active).stream()
+                .collect(Collectors.toMap(
+                        ServiceCatalog::getServiceName,
+                        service -> 0L,
+                        (a, b) -> a,
+                        LinkedHashMap::new));
+        requestRepository.getServiceBreakdown(request.deptId(), fromDate, toDate)
+                .forEach(row -> serviceMap.put((String) row[0], (Long) row[1]));
+        List<LabelCount> serviceBreakdown = serviceMap.entrySet().stream()
+                .map(entry -> new LabelCount(entry.getKey(), entry.getValue()))
+                .toList();
+
+        List<DateCount> trend = requestRepository.getTrend(request.deptId(), fromDate, toDate)
+                .stream()
+                .map(row -> new DateCount((LocalDate) row[0], (Long) row[1]))
+                .toList();
+
+        return new ServiceRequestAnalyticsResponse(
+                totalRequests,
+                statusBreakdown,
+                serviceBreakdown,
+                trend,
+                overdueRequests);
     }
 
     private RequestListItemResponse toListItem(ServiceRequest r) {
