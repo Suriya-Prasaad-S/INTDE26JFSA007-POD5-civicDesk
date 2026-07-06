@@ -26,7 +26,8 @@ import java.util.List;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-
+import com.civicdesk.module.permit.dto.request.PermitAnalyticsRequest;
+import com.civicdesk.module.permit.dto.response.PermitAnalyticsResponse;
 @RestController
 @RequestMapping("/civicDesk/permits")
 public class PermitController {
@@ -350,6 +351,17 @@ public class PermitController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(msg("Failed to submit inspection outcome"));
         }
+    }
+
+    @PostMapping("/analytics")
+    public ResponseEntity<PermitAnalyticsResponse> getPermitAnalytics(
+            @RequestBody PermitAnalyticsRequest request) {
+
+        return ResponseEntity.ok(
+                permitService.getPermitAnalytics(
+                        request.getFromDate(),
+                        request.getToDate()
+                ));
     }
 
     private Map<String, Object> msg(String message) {

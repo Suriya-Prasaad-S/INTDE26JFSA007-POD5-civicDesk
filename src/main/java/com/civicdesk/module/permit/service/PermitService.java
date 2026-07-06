@@ -34,6 +34,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import com.civicdesk.module.permit.dto.response.*;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.Map;
 
 @Service
 public class PermitService {
@@ -441,5 +445,176 @@ public class PermitService {
         String filePath = doc.getFilePath();
         // Extract filename from path like /uploads/permits/f5179bfc/site_plan.pdf
         return filePath.substring(filePath.lastIndexOf("/") + 1);
+    }
+
+    public PermitAnalyticsResponse getPermitAnalytics(
+            LocalDate fromDate,
+            LocalDate toDate) {
+
+        PermitAnalyticsResponse response =
+                new PermitAnalyticsResponse();
+
+        response.setTotalPermits(
+                permitRepo.countPermits(
+                        fromDate,
+                        toDate));
+
+        response.setStatusBreakdown(
+                buildPermitStatusBreakdown(
+                        fromDate,
+                        toDate));
+
+        response.setPermitTypeBreakdown(
+                buildPermitTypeBreakdown(
+                        fromDate,
+                        toDate));
+
+        response.setApplicationTrend(
+                permitRepo.getApplicationTrend(
+                        fromDate,
+                        toDate,
+                        AnalyticsTrendResponse.class));
+
+        response.setDecisionTrend(
+                permitRepo.getDecisionTrend(
+                        fromDate,
+                        toDate,
+                        AnalyticsTrendResponse.class));
+
+        response.setAverageDecisionDays(
+                calculateAverageDecisionDays(
+                        fromDate,
+                        toDate));
+
+        PermitAnalyticsResponse.InspectionAnalytics inspection =
+                new PermitAnalyticsResponse.InspectionAnalytics();
+
+        inspection.setStatusBreakdown(
+                buildInspectionStatusBreakdown());
+
+        inspection.setOutcomeBreakdown(
+                buildInspectionOutcomeBreakdown());
+
+        response.setInspection(inspection);
+
+        return response;
+    }
+
+    private List<AnalyticsLabelCountDto> buildPermitStatusBreakdown(
+            LocalDate fromDate,
+            LocalDate toDate) {
+
+        List<AnalyticsLabelCountResponse> dbValues =
+                permitRepo.getStatusBreakdown(
+                        fromDate,
+                        toDate,
+                        AnalyticsLabelCountResponse.class);
+
+        Map<String, Long> countMap =
+                dbValues.stream()
+                        .collect(Collectors.toMap(
+                                AnalyticsLabelCountResponse::getLabel,
+                                AnalyticsLabelCountResponse::getCount));
+
+        return Arrays.stream(PermitStatus.values())
+                .map(status ->
+                        new AnalyticsLabelCountDto(
+                                status.name(),
+                                countMap.getOrDefault(
+                                        status.name(),
+                                        0L)))
+                .collect(Collectors.toList());
+    }
+
+    private List<AnalyticsLabelCountDto> buildPermitTypeBreakdown(
+            LocalDate fromDate,
+            LocalDate toDate) {
+
+        List<AnalyticsLabelCountResponse> dbValues =
+                permitRepo.getPermitTypeBreakdown(
+                        fromDate,
+                        toDate,
+                        AnalyticsLabelCountResponse.class);
+
+        Map<String, Long> countMap =
+                dbValues.stream()
+                        .collect(Collectors.toMap(
+                                AnalyticsLabelCountResponse::getLabel,
+                                AnalyticsLabelCountResponse::getCount));
+
+        return Arrays.stream(PermitType.values())
+                .map(type ->
+                        new AnalyticsLabelCountDto(
+                                type.name(),
+                                countMap.getOrDefault(
+                                        type.name(),
+                                        0L)))
+                .collect(Collectors.toList());
+    }
+
+    private List<AnalyticsLabelCountDto> buildInspectionStatusBreakdown() {
+
+        List<AnalyticsLabelCountResponse> dbValues =
+                inspectionRepo.getStatusBreakdown(
+                        AnalyticsLabelCountResponse.class);
+
+        Map<String, Long> countMap =
+                dbValues.stream()
+                        .collect(Collectors.toMap(
+                                AnalyticsLabelCountResponse::getLabel,
+                                AnalyticsLabelCountResponse::getCount));
+
+        return Arrays.stream(InspectionStatus.values())
+                .map(status ->
+                        new AnalyticsLabelCountDto(
+                                status.name(),
+                                countMap.getOrDefault(
+                                        status.name(),
+                                        0L)))
+                .collect(Collectors.toList());
+    }
+
+    private List<AnalyticsLabelCountDto> buildInspectionOutcomeBreakdown() {
+
+        List<AnalyticsLabelCountResponse> dbValues =
+                inspectionRepo.getOutcomeBreakdown(
+                        AnalyticsLabelCountResponse.class);
+
+        Map<String, Long> countMap =
+                dbValues.stream()
+                        .collect(Collectors.toMap(
+                                AnalyticsLabelCountResponse::getLabel,
+                                AnalyticsLabelCountResponse::getCount));
+
+        return List.of(
+                new AnalyticsLabelCountDto(
+                        "Pass",
+                        countMap.getOrDefault("Pass", 0L)),
+                new AnalyticsLabelCountDto(
+                        "Fail",
+                        countMap.getOrDefault("Fail", 0L))
+        );
+    }
+
+    private Double calculateAverageDecisionDays(
+            LocalDate fromDate,
+            LocalDate toDate) {
+
+        List<PermitApplication> permits =
+                permitRepo.getDecidedPermits(
+                        fromDate,
+                        toDate);
+
+        if (permits.isEmpty()) {
+            return 0.0;
+        }
+
+        return permits.stream()
+                .mapToLong(p ->
+                        ChronoUnit.DAYS.between(
+                                p.getApplicationDate(),
+                                p.getDecisionDate()))
+                .average()
+                .orElse(0.0);
     }
 }
